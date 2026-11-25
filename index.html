@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Cronodisco">
+<meta name="theme-color" content="#5c1424">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Cronodisco</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=Archivo+Black&display=swap" rel="stylesheet">
+<style>
+/* VOICE: party game, warm and bold, readable from across a table
+   IDEA: a record shelf; each card is a sleeve standing in year order
+   PICTURE: a spinning record that plays the hidden song beside the player's shelf
+   COLOUR and TYPE: oxblood ground, paper sleeves, hot pink accent; Archivo Black + Archivo
+   LAYOUT: score strip on top, player left, timeline right; stacks under 900px */
+:root{color-scheme:light dark;
+--bg:light-dark(#f4eee6,#1c0b10);--ink:light-dark(#22090f,#f6ece3);--soft:light-dark(#7a5a60,#c9a9ad);
+--band:light-dark(#5c1424,#3a1119);--bandink:#fbeee6;--card:light-dark(#fffaf3,#2c1318);--line:light-dark(#e2d4c8,#4a2229);
+--acc:#ff3d6e;--ok:#1f9d6b;--bad:#d8363c}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.45 Archivo,system-ui,sans-serif;overflow-x:clip;-webkit-tap-highlight-color:transparent;padding-bottom:env(safe-area-inset-bottom)}
+h1,h2,.yr,.big{font-family:"Archivo Black",Archivo,system-ui,sans-serif;font-weight:400;line-height:1.05;margin:0}
+button,.btn{font:600 16px Archivo,system-ui,sans-serif;min-height:48px;padding:0 18px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+button:focus-visible,input:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+button.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+button:disabled{opacity:.4;cursor:default}
+input{font:16px Archivo,system-ui,sans-serif;min-height:48px;padding:0 14px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--ink)}
+header{background:var(--band);color:var(--bandink);padding:12px max(3vw,14px);padding-top:max(12px,env(safe-area-inset-top));display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+header h1{font-size:24px;margin-right:auto}
+header button{background:transparent;color:var(--bandink);border-color:#ffffff40;min-height:40px}
+.score{display:flex;gap:8px;flex-wrap:wrap;padding:10px max(3vw,14px);background:var(--band);border-top:1px solid #ffffff22}
+.chip{color:var(--bandink);border:2px solid #ffffff30;border-radius:999px;padding:6px 14px;display:flex;gap:10px;align-items:center;font-size:15px}
+.chip.on{background:var(--acc);border-color:var(--acc)}
+.chip b{font-family:"Archivo Black",system-ui;font-weight:400}
+.dots{letter-spacing:2px}
+main{padding:20px max(3vw,14px) 40px;max-width:1400px;margin:auto}
+.play{display:grid;grid-template-columns:minmax(260px,360px) minmax(0,1fr);gap:24px;align-items:start}
+.panel{background:var(--card);border:2px solid var(--line);border-radius:20px;padding:20px}
+.who{font-size:15px;color:var(--soft);margin:0 0 4px}
+h2{font-size:34px;margin-bottom:12px}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.row>*{flex:1 1 140px}
+.hint{color:var(--soft);font-size:15px;margin:10px 0 0}
+.deck{display:grid;place-items:center;aspect-ratio:1;border-radius:16px;background:radial-gradient(circle at 50% 50%,#3a1119,#160608);position:relative;overflow:hidden}
+.rec{width:78%;aspect-ratio:1;border-radius:50%;background:repeating-radial-gradient(circle,#1a1a1a 0 2px,#262626 2px 4px);box-shadow:0 12px 30px #0008,inset 0 0 0 8px #111;display:grid;place-items:center;border:none;padding:0;min-height:0}
+.rec::after{content:"";width:34%;aspect-ratio:1;border-radius:50%;background:var(--acc);box-shadow:inset 0 0 0 6px #0002}
+.rec.spin{animation:spin 2.2s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.rec.spin{animation:none}}
+.playlbl{position:absolute;bottom:12px;left:0;right:0;text-align:center;color:#fbeee6;font-weight:800;font-size:15px;pointer-events:none}
+.tl{display:flex;flex-wrap:wrap;gap:6px;align-items:stretch}
+.slot{min-width:44px;width:44px;min-height:118px;padding:0;border:2px dashed var(--line);background:transparent;border-radius:12px;font-size:22px;color:var(--soft);position:relative}
+.slot.sel{border:3px solid var(--acc);background:color-mix(in srgb,var(--acc) 15%,transparent);color:var(--acc);width:64px}
+.slot.ch{border-style:solid;border-color:#7d5cff}
+.slot .tag{position:absolute;left:50%;transform:translateX(-50%);bottom:6px;font-size:12px;background:#7d5cff;color:#fff;border-radius:6px;padding:1px 5px;white-space:nowrap}
+.slot.right{border:3px solid var(--ok);background:color-mix(in srgb,var(--ok) 18%,transparent)}
+.sleeve{width:118px;min-height:118px;border-radius:12px;background:var(--band);color:var(--bandink);padding:10px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 3px 0 #0003}
+.sleeve .yr{font-size:28px}
+.sleeve small{font-size:13px;line-height:1.2;opacity:.85;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.big{font-size:56px}
+.verdict{font:800 20px Archivo,system-ui,sans-serif;padding:8px 14px;border-radius:10px;display:inline-block;margin-top:6px;color:#fff}
+.verdict.ok{background:var(--ok)}.verdict.bad{background:var(--bad)}
+.setup{max-width:720px;margin:auto}
+.setup .players{display:grid;gap:10px;margin:14px 0}
+.setup .p{display:flex;gap:8px}.setup .p input{flex:1}
+.setup .p button{flex:none;width:48px;padding:0}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:16px 0}
+.opts label{display:grid;gap:6px;font-weight:600}
+.overlay{position:fixed;inset:0;background:#000a;display:grid;place-items:center;padding:20px;z-index:9}
+.overlay .panel{max-width:520px;width:100%}
+.pick{display:grid;gap:8px;margin-top:12px}
+.win{text-align:center;padding:40px 20px}
+.win .big{font-size:clamp(40px,7vw,72px);margin:12px 0}
+.note{font-size:13px;color:var(--soft);margin-top:18px}
+.deckbox{border:2px dashed var(--line);border-radius:14px;padding:14px;margin:14px 0}
+.bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:8px}.bar i{display:block;height:100%;background:var(--acc)}
+a{color:inherit}
+@media(max-width:900px){.play{grid-template-columns:minmax(0,1fr)}.qrcol{max-width:420px;width:100%;margin:auto}}
+@media(max-width:600px){.sleeve{width:96px}.sleeve .yr{font-size:22px}h2{font-size:28px}.big{font-size:40px}}
+</style>
+</head>
+<body>
+<header><h1>Cronodisco</h1><span id="deckInfo"></span><button id="bUndo" type="button">Deshacer</button><button id="bNew" type="button">Nueva partida</button></header>
+<div class="score" id="score" hidden></div>
+<main id="app"></main>
+<div id="ov"></div>
+<audio id="au" preload="auto"></audio>
+<p class="note" style="text-align:center;padding:0 16px 20px">Fragmentos de 30 s desde la API de Deezer. Uso privado, no comercial.</p>
+<script>
+{
+const $ = s => document.querySelector(s);
+const esc = v => String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const KEY = 'cronodisco-game-v2', DKEY = 'cronodisco-deck-v2';
+const au = $('#au');
+let DECK = [], S = null, hist = [], prev = {id:null, url:null, err:null};
+
+function ls(k, v){try{ if(v===undefined) return JSON.parse(localStorage.getItem(k)||'null'); if(v===null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); }catch(e){ return null }}
+DECK = ls(DKEY) || [];
+function store(){ ls(KEY, S) }
+function snap(){hist.push(JSON.stringify(S)); if(hist.length>30) hist.shift()}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+const yr = i => DECK[i][2];
+const P = () => S.players[S.turn];
+
+/* ---------- Deezer (JSONP: su API no permite CORS) ---------- */
+function jsonp(url){
+  return new Promise((res, rej) => {
+    const cb = 'dz' + Math.random().toString(36).slice(2), s = document.createElement('script');
+    const done = () => { clearTimeout(t); delete window[cb]; s.remove() };
+    const t = setTimeout(() => { done(); rej(new Error('timeout')) }, 9000);
+    window[cb] = d => { done(); res(d) };
+    s.onerror = () => { done(); rej(new Error('red')) };
+    s.src = url + (url.includes('?') ? '&' : '?') + 'output=jsonp&callback=' + cb;
+    document.head.appendChild(s);
+  });
+}
+async function prefetch(i){
+  const id = DECK[i][3]; prev = {id, url:null, err:null, card:i};
+  au.pause(); au.removeAttribute('src');
+  if(!id){ prev.err = 'Sin ID de Deezer'; return }
+  try{
+    const d = await jsonp('https://api.deezer.com/track/' + id);
+    if(prev.card !== i) return;
+    if(d.error || !d.preview){ prev.err = 'Sin fragmento disponible' } else { prev.url = d.preview; au.src = d.preview; au.load() }
+  }catch(e){ if(prev.card===i) prev.err = 'Sin conexión con Deezer' }
+  if(S && S.phase==='listen') paintPlayer();
+}
+function hideMeta(){ try{ if('mediaSession' in navigator) navigator.mediaSession.metadata = new MediaMetadata({title:'Cronodisco', artist:'¿Qué año es?'}) }catch(e){} }
+au.addEventListener('play', () => { hideMeta(); paintPlayer() });
+au.addEventListener('pause', paintPlayer);
+au.addEventListener('ended', paintPlayer);
+
+const norm = s => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\(.*?\)|\[.*?\]/g,' ').replace(/ - .*$/,' ').replace(/feat\..*$/,' ').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+async function findDeezer(a, t){
+  const a1 = a.split(/ feat\.| & | and | x |, /i)[0];
+  let d = (await jsonp('https://api.deezer.com/search?limit=25&q=' + encodeURIComponent(`artist:"${a1}" track:"${t}"`))).data || [];
+  if(!d.length) d = (await jsonp('https://api.deezer.com/search?limit=25&q=' + encodeURIComponent(a1 + ' ' + t))).data || [];
+  const nt = norm(t), na = norm(a1), bad = /live|remix|karaoke|instrumental|cover|tribute|version|edit|acoustic|demo/i;
+  let best = null, bs = -1;
+  for(const r of d){
+    let s = 0; const rt = norm(r.title), ra = norm(r.artist.name);
+    if(rt===nt) s+=50; else if(rt.startsWith(nt)||nt.startsWith(rt)) s+=30; else if(rt.includes(nt)||nt.includes(rt)) s+=15;
+    if(ra===na) s+=40; else if(ra.includes(na)||na.includes(ra)) s+=25;
+    if(r.preview) s+=20; if(bad.test(r.title+' '+r.album.title)) s-=25;
+    s += Math.min(10,(r.rank||0)/100000);
+    if(s>bs){bs=s;best=r}
+  }
+  return best && bs >= 60 ? best.id : null;
+}
+
+/* ---------- mazo ---------- */
+function parseCSV(txt){
+  const rows = []; let row = [], f = '', q = false;
+  for(let i=0;i<txt.length;i++){
+    const c = txt[i];
+    if(q){ if(c==='"'){ if(txt[i+1]==='"'){f+='"';i++} else q=false } else f+=c }
+    else if(c==='"') q = true;
+    else if(c===',' || c===';'){ row.push(f); f='' }
+    else if(c==='\n' || c==='\r'){ if(c==='\r' && txt[i+1]==='\n') i++; row.push(f); rows.push(row); row=[]; f='' }
+    else f += c;
+  }
+  if(f || row.length){ row.push(f); rows.push(row) }
+  return rows.filter(r => r.some(x => x.trim()));
+}
+async function importFile(file, add){
+  const txt = await file.text(); let cards = [];
+  if(/^\s*\[/.test(txt)) cards = JSON.parse(txt);
+  else {
+    const rows = parseCSV(txt), h = rows.shift().map(x => norm(x));
+    const col = names => h.findIndex(x => names.includes(x));
+    const ia = col(['artista','artist']), it = col(['titulo','title','cancion','song']), iy = col(['ano','anio','year','year original']), id = col(['deezer','deezer id','id']);
+    if(ia<0 || it<0 || iy<0) throw new Error('El CSV necesita columnas artista, titulo y ano');
+    cards = rows.map(r => [r[ia].trim(), r[it].trim(), parseInt(r[iy]), id>=0 && r[id] ? +r[id] : null]);
+  }
+  cards = cards.filter(c => c[0] && c[1] && c[2] > 1800);
+  const missing = cards.filter(c => !c[3]);
+  for(let k=0;k<missing.length;k++){
+    $('#prog').innerHTML = `Buscando en Deezer ${k+1} de ${missing.length}…<div class="bar"><i style="width:${(k+1)/missing.length*100}%"></i></div>`;
+    try{ missing[k][3] = await findDeezer(missing[k][0], missing[k][1]) }catch(e){}
+  }
+  const ok = cards.filter(c => c[3]);
+  DECK = add ? DECK.concat(ok) : ok;
+  ls(DKEY, DECK); ls(KEY, null);
+  return {total:cards.length, ok:ok.length, sin:cards.length-ok.length};
+}
+
+/* ---------- setup ---------- */
+function setupView(names, msg){
+  $('#score').hidden = true; $('#deckInfo').textContent = '';
+  names = names || ['Jugador 1','Jugador 2'];
+  const saved = ls(KEY), yrs = DECK.map(d=>d[2]);
+  $('#app').innerHTML = `<section class="setup panel">
+    <h2>Nueva partida</h2>
+    <div class="deckbox">
+      <p style="margin:0"><b>Mazo:</b> ${DECK.length ? `${DECK.length} canciones (${Math.min(...yrs)}–${Math.max(...yrs)})` : 'vacío'}</p>
+      <p class="hint">Carga un archivo de mazo (JSON o CSV con columnas artista, titulo, ano y opcionalmente deezer). Si falta el ID de Deezer, la app lo busca.</p>
+      <div class="row"><label class="btn" for="fRep">Cargar mazo</label><label class="btn" for="fAdd">Agregar canciones</label></div>
+      <input type="file" id="fRep" accept=".json,.csv,text/csv,application/json" hidden><input type="file" id="fAdd" accept=".json,.csv,text/csv,application/json" hidden>
+      <p class="hint" id="prog">${msg ? esc(msg) : ''}</p>
+    </div>
+    ${saved && !saved.winner && DECK.length ? `<div class="row"><button class="pri" id="bResume" type="button">Continuar partida guardada</button></div>` : ''}
+    <div class="players" id="pl">${names.map((n,i)=>`<div class="p"><input id="pn${i}" value="${esc(n)}" aria-label="Nombre jugador ${i+1}" maxlength="18"><button type="button" data-rm="${i}" aria-label="Quitar">✕</button></div>`).join('')}</div>
+    <div class="row"><button type="button" id="bAdd" ${names.length>=10?'disabled':''}>Agregar jugador o equipo</button></div>
+    <div class="opts">
+      <label>Cartas para ganar<input id="oWin" type="number" min="3" max="20" value="10" inputmode="numeric"></label>
+      <label>Fichas iniciales<input id="oTok" type="number" min="0" max="5" value="2" inputmode="numeric"></label>
+    </div>
+    <div class="row"><button class="pri" id="bStart" type="button" ${DECK.length < names.length + 5 ? 'disabled' : ''}>Repartir y empezar</button></div>
+  </section>`;
+  const cur = () => [...document.querySelectorAll('#pl input')].map(i=>i.value);
+  $('#bAdd').onclick = () => setupView([...cur(), `Jugador ${cur().length+1}`]);
+  document.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => {const c = cur(); if(c.length>2){c.splice(+b.dataset.rm,1); setupView(c)}});
+  for(const [id, add] of [['#fRep', false], ['#fAdd', true]]) $(id).onchange = async e => {
+    const f = e.target.files[0]; if(!f) return;
+    try{ const r = await importFile(f, add); setupView(cur(), `Listo: ${r.ok} canciones cargadas${r.sin ? `, ${r.sin} sin coincidencia en Deezer` : ''}.`) }
+    catch(err){ setupView(cur(), 'No se pudo leer el archivo: ' + err.message) }
+  };
+  if($('#bResume')) $('#bResume').onclick = () => {S = saved; hist = []; render(); prefetch(S.card)};
+  $('#bStart').onclick = () => {
+    const ns = cur().map(s=>s.trim()).filter(Boolean); if(ns.length<1) return;
+    const win = Math.max(3, Math.min(20, +$('#oWin').value||10)), tok = Math.max(0, Math.min(5, +$('#oTok').value||0));
+    const deck = shuffle(DECK.map((_,i)=>i));
+    const players = ns.map(n => ({name:n, tokens:tok, tl:[deck.pop()]}));
+    let first = 0; players.forEach((p,i)=>{ if(yr(p.tl[0]) < yr(players[first].tl[0])) first = i });
+    S = {players, deck, discard:[], turn:first, win, phase:'listen', card:deck.pop(), slot:null, ch:[], named:false, res:null, winner:null};
+    hist = []; render(); prefetch(S.card);
+  };
+}
+
+/* ---------- juego ---------- */
+function insertSorted(tl, c){const i = tl.findIndex(k => yr(k) > yr(c)); i<0 ? tl.push(c) : tl.splice(i,0,c)}
+function slotOk(tl, k, c){const y = yr(c); return (k===0 || y >= yr(tl[k-1])) && (k===tl.length || y <= yr(tl[k]))}
+function draw(){ if(!S.deck.length){ S.deck = shuffle(S.discard.splice(0)) } return S.deck.length ? S.deck.pop() : S.card }
+function newCard(){ S.discard.push(S.card); S.card = draw(); S.slot = null; prefetch(S.card) }
+
+function scoreBar(){
+  $('#score').hidden = false;
+  $('#score').innerHTML = S.players.map((p,i)=>`<div class="chip ${i===S.turn?'on':''}"><span>${esc(p.name)}</span><b>${p.tl.length}/${S.win}</b><span class="dots" aria-label="${p.tokens} fichas">${'●'.repeat(p.tokens)}${'○'.repeat(Math.max(0,5-p.tokens))}</span></div>`).join('');
+  $('#deckInfo').textContent = `${S.deck.length} en el mazo`;
+}
+function timeline(p, interactive){
+  const tl = p.tl; let h = '';
+  for(let k=0;k<=tl.length;k++){
+    const chs = S.ch.filter(c=>c.slot===k);
+    const cls = ['slot', S.slot===k?'sel':'', chs.length?'ch':'', S.phase==='reveal' && S.res && !S.res.ok && slotOk(tl,k,S.card) ? 'right':''].join(' ');
+    h += `<button type="button" class="${cls}" data-slot="${k}" ${interactive?'':'disabled'} aria-label="Ubicar en posición ${k+1}">${S.slot===k?'▼':'+'}${chs.map(c=>`<span class="tag">${esc(S.players[c.p].name.slice(0,6))}</span>`).join('')}</button>`;
+    if(k<tl.length){const c = DECK[tl[k]]; h += `<div class="sleeve"><span class="yr">${c[2]}</span><small>${esc(c[0])}<br>${esc(c[1])}</small></div>`}
+  }
+  return `<div class="tl">${h}</div>`;
+}
+function paintPlayer(){
+  const box = $('#player'); if(!box || !S || S.phase!=='listen') return;
+  const playing = !au.paused && !au.ended;
+  const lbl = prev.err ? prev.err : !prev.url ? 'Cargando…' : playing ? 'Toca para pausar' : 'Toca para escuchar';
+  box.innerHTML = `<div class="deck"><button type="button" class="rec ${playing?'spin':''}" id="bPlay" aria-label="${esc(lbl)}" ${prev.url?'':'disabled'}></button><span class="playlbl">${esc(lbl)}</span></div>`;
+  $('#bPlay').onclick = () => { if(au.paused || au.ended){ if(au.ended) au.currentTime = 0; au.play().catch(()=>{}) } else au.pause() };
+}
+function render(){
+  if(!S){ setupView(); return }
+  store(); scoreBar();
+  if(S.winner!=null){
+    au.pause();
+    const w = S.players[S.winner];
+    $('#app').innerHTML = `<section class="panel win"><p class="who">Ganador</p><div class="big">${esc(w.name)}</div><p>${w.tl.length} canciones en orden.</p>${timeline(w,false)}<div class="row" style="justify-content:center"><button class="pri" id="bAgain" type="button">Jugar otra vez</button></div></section>`;
+    $('#bAgain').onclick = () => { const n = S.players.map(p=>p.name); S = null; ls(KEY,null); setupView(n) };
+    return;
+  }
+  const p = P(), listen = S.phase==='listen', c = DECK[S.card];
+  const left = listen ? `
+      <div id="player"></div>
+      <div class="row">
+        <button type="button" id="bRe">Repetir</button>
+        <button type="button" id="bSkip" ${p.tokens<1?'disabled':''}>Saltar (−1 ficha)</button>
+        <button type="button" id="bNoPlay">No suena: otra</button>
+        <button type="button" id="bBuy" ${p.tokens<3||S.slot!=null?'disabled':''}>Comprar carta (3 fichas)</button>
+      </div>`
+    : `<div><span class="big">${c[2]}</span></div>
+      <p style="margin:8px 0 0;font-weight:800">${esc(c[1])}</p><p style="margin:0" class="who">${esc(c[0])}</p>
+      <span class="verdict ${S.res.ok?'ok':'bad'}">${esc(S.res.msg)}</span>
+      <p class="hint"><a href="https://www.deezer.com/track/${encodeURIComponent(c[3])}" target="_blank" rel="noopener">Escuchar completa en Deezer</a></p>
+      <div class="row">
+        <button type="button" id="bNamed" ${S.named||p.tokens>=5?'disabled':''}>${S.named?'Ficha ganada ✓':'Nombró artista y título (+1)'}</button>
+        <button type="button" class="pri" id="bNext">Siguiente turno</button>
+      </div>`;
+  const others = S.players.map((q,i)=>({q,i})).filter(o=>o.i!==S.turn && o.q.tokens>0 && !S.ch.some(x=>x.p===o.i));
+  $('#app').innerHTML = `<div class="play">
+    <section class="panel qrcol"><p class="who">Turno de</p><h2>${esc(p.name)}</h2>${left}</section>
+    <section class="panel">
+      <p class="who">${listen ? (S.slot==null ? 'Toca dónde va la canción en tu línea de tiempo' : 'Posición elegida. Los demás pueden desafiar antes de revelar.') : 'Resultado'}</p>
+      ${timeline(p, listen)}
+      ${listen ? `<div class="row">
+        <button type="button" id="bCh" ${S.slot==null||!others.length?'disabled':''}>Desafiar (−1 ficha)</button>
+        <button type="button" class="pri" id="bRev" ${S.slot==null?'disabled':''}>Revelar</button></div>
+        ${S.chMode!=null ? `<p class="hint">${esc(S.players[S.chMode].name)}: toca otra posición para desafiar.</p>`:''}` : ''}
+    </section></div>`;
+  document.querySelectorAll('[data-slot]').forEach(b => b.onclick = () => {
+    const k = +b.dataset.slot;
+    if(S.chMode!=null){
+      if(k===S.slot || S.ch.some(x=>x.slot===k)) return;
+      snap(); S.players[S.chMode].tokens--; S.ch.push({p:S.chMode, slot:k}); S.chMode = null; render(); return;
+    }
+    if(S.ch.length) return;
+    S.slot = S.slot===k ? null : k; render();
+  });
+  if(listen){
+    paintPlayer();
+    $('#bRe').onclick = () => { if(prev.url){ au.currentTime = 0; au.play().catch(()=>{}) } };
+    $('#bSkip').onclick = () => {snap(); p.tokens--; newCard(); render()};
+    $('#bNoPlay').onclick = () => {snap(); newCard(); render()};
+    $('#bBuy').onclick = () => {snap(); p.tokens-=3; S.discard.push(S.card); const b = draw(); insertSorted(p.tl,b); finishTurn()};
+    $('#bCh').onclick = () => modalPick(others);
+    $('#bRev').onclick = reveal;
+  } else {
+    $('#bNamed').onclick = () => {snap(); p.tokens = Math.min(5,p.tokens+1); S.named = true; render()};
+    $('#bNext').onclick = () => {snap(); finishTurn()};
+  }
+}
+function modalPick(others){
+  $('#ov').innerHTML = `<div class="overlay"><div class="panel"><h2>¿Quién desafía?</h2><div class="pick">${others.map(o=>`<button type="button" data-who="${o.i}">${esc(o.q.name)} · ${o.q.tokens} fichas</button>`).join('')}<button type="button" id="bX">Cancelar</button></div></div></div>`;
+  document.querySelectorAll('[data-who]').forEach(b => b.onclick = () => {S.chMode = +b.dataset.who; $('#ov').innerHTML=''; render()});
+  $('#bX').onclick = () => $('#ov').innerHTML='';
+}
+function reveal(){
+  snap(); au.pause();
+  const p = P(), ok = slotOk(p.tl, S.slot, S.card);
+  let msg;
+  if(ok){ insertSorted(p.tl, S.card); S.slot=null; S.ch=[]; msg = '¡Correcto!'; }
+  else {
+    const w = S.ch.find(x => slotOk(p.tl, x.slot, S.card));
+    if(w){ insertSorted(S.players[w.p].tl, S.card); msg = `Incorrecto: ${S.players[w.p].name} se la roba`; }
+    else { S.discard.push(S.card); msg = 'Incorrecto: carta descartada'; }
+  }
+  S.res = {ok, msg}; S.phase = 'reveal'; S.chMode = null;
+  checkWin(); render();
+}
+function checkWin(){ const i = S.players.findIndex(q => q.tl.length >= S.win); if(i>=0) S.winner = i; }
+function finishTurn(){
+  checkWin();
+  if(S.winner==null){ S.turn = (S.turn+1) % S.players.length; S.card = draw(); S.phase='listen'; S.slot=null; S.ch=[]; S.named=false; S.res=null; S.chMode=null; prefetch(S.card) }
+  render();
+}
+
+$('#bUndo').onclick = () => { if(hist.length && S){ const before = S.card; S = JSON.parse(hist.pop()); render(); if(S.card!==before && S.phase==='listen') prefetch(S.card) } };
+$('#bNew').onclick = () => {
+  if(!S){ setupView(); return }
+  $('#ov').innerHTML = `<div class="overlay"><div class="panel"><h2>¿Terminar esta partida?</h2><p class="hint">Se pierde el avance actual.</p><div class="row"><button type="button" id="bNo">Seguir jugando</button><button type="button" class="pri" id="bYes">Nueva partida</button></div></div></div>`;
+  $('#bNo').onclick = () => $('#ov').innerHTML='';
+  $('#bYes').onclick = () => {$('#ov').innerHTML=''; au.pause(); const names = S.players.map(p=>p.name); S=null; ls(KEY,null); setupView(names)};
+};
+setupView();
+}
+</script>
+</body>
+</html>
