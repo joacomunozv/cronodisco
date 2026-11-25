@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Cronodisco">
@@ -24,28 +24,35 @@
 --acc:#ff3d6e;--ok:#1f9d6b;--bad:#d8363c}
 *{box-sizing:border-box;min-width:0}
 body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.45 Archivo,system-ui,sans-serif;overflow-x:clip;-webkit-tap-highlight-color:transparent;padding-bottom:env(safe-area-inset-bottom)}
-h1,h2,.yr,.big{font-family:"Archivo Black",Archivo,system-ui,sans-serif;font-weight:400;line-height:1.05;margin:0}
-button,.btn{font:600 16px Archivo,system-ui,sans-serif;min-height:48px;padding:0 18px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
-button:focus-visible,input:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+h1,h2,h3,.yr,.big{font-family:"Archivo Black",Archivo,system-ui,sans-serif;font-weight:400;line-height:1.05;margin:0}
+button,.btn{font:600 16px Archivo,system-ui,sans-serif;min-height:48px;padding:0 18px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;gap:8px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
 button.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+button.ghost{background:transparent}
+button.danger{color:var(--bad)}
 button:disabled{opacity:.4;cursor:default}
-input{font:16px Archivo,system-ui,sans-serif;min-height:48px;padding:0 14px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--ink)}
+input,select,textarea{font:16px Archivo,system-ui,sans-serif;min-height:48px;padding:0 14px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--ink);width:100%}
 header{background:var(--band);color:var(--bandink);padding:12px max(3vw,14px);padding-top:max(12px,env(safe-area-inset-top));display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 header h1{font-size:24px;margin-right:auto}
 header button{background:transparent;color:var(--bandink);border-color:#ffffff40;min-height:40px}
+header button.on{background:#ffffff22}
 .score{display:flex;gap:8px;flex-wrap:wrap;padding:10px max(3vw,14px);background:var(--band);border-top:1px solid #ffffff22}
 .chip{color:var(--bandink);border:2px solid #ffffff30;border-radius:999px;padding:6px 14px;display:flex;gap:10px;align-items:center;font-size:15px}
 .chip.on{background:var(--acc);border-color:var(--acc)}
 .chip b{font-family:"Archivo Black",system-ui;font-weight:400}
 .dots{letter-spacing:2px}
 main{padding:20px max(3vw,14px) 40px;max-width:1400px;margin:auto}
+.narrow{max-width:720px;margin:auto}
 .play{display:grid;grid-template-columns:minmax(260px,360px) minmax(0,1fr);gap:24px;align-items:start}
 .panel{background:var(--card);border:2px solid var(--line);border-radius:20px;padding:20px}
+.panel+.panel{margin-top:16px}
 .who{font-size:15px;color:var(--soft);margin:0 0 4px}
 h2{font-size:34px;margin-bottom:12px}
-.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+h3{font-size:22px;margin-bottom:10px}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center}
 .row>*{flex:1 1 140px}
 .hint{color:var(--soft);font-size:15px;margin:10px 0 0}
+.err{color:var(--bad);font-weight:600}
 .deck{display:grid;place-items:center;aspect-ratio:1;border-radius:16px;background:radial-gradient(circle at 50% 50%,#3a1119,#160608);position:relative;overflow:hidden}
 .rec{width:78%;aspect-ratio:1;border-radius:50%;background:repeating-radial-gradient(circle,#1a1a1a 0 2px,#262626 2px 4px);box-shadow:0 12px 30px #0008,inset 0 0 0 8px #111;display:grid;place-items:center;border:none;padding:0;min-height:0}
 .rec::after{content:"";width:34%;aspect-ratio:1;border-radius:50%;background:var(--acc);box-shadow:inset 0 0 0 6px #0002}
@@ -63,51 +70,81 @@ h2{font-size:34px;margin-bottom:12px}
 .sleeve .yr{font-size:28px}
 .sleeve small{font-size:13px;line-height:1.2;opacity:.85;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .big{font-size:56px}
+.code{font-family:"Archivo Black",system-ui;font-size:clamp(48px,9vw,88px);letter-spacing:.12em;line-height:1}
 .verdict{font:800 20px Archivo,system-ui,sans-serif;padding:8px 14px;border-radius:10px;display:inline-block;margin-top:6px;color:#fff}
 .verdict.ok{background:var(--ok)}.verdict.bad{background:var(--bad)}
-.setup{max-width:720px;margin:auto}
-.setup .players{display:grid;gap:10px;margin:14px 0}
-.setup .p{display:flex;gap:8px}.setup .p input{flex:1}
-.setup .p button{flex:none;width:48px;padding:0}
-.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:16px 0}
+.lobby{display:grid;grid-template-columns:minmax(240px,340px) minmax(0,1fr);gap:24px;align-items:start}
+.qr{background:#fff;border-radius:16px;padding:12px;aspect-ratio:1}
+.qr svg{width:100%;height:100%;display:block}
+.list{display:grid;gap:8px;margin:12px 0 0;padding:0;list-style:none}
+.list li{display:flex;align-items:center;gap:10px;justify-content:space-between;border:2px solid var(--line);border-radius:12px;padding:8px 8px 8px 14px;min-height:52px}
+.list li.me{border-color:var(--acc)}
+.list li.turn{background:color-mix(in srgb,var(--acc) 14%,transparent);border-color:var(--acc)}
+.list small{color:var(--soft)}
+.pill{font-size:13px;font-weight:800;border-radius:999px;padding:3px 10px;background:var(--line);white-space:nowrap}
+.pill.lobby{background:#7d5cff;color:#fff}.pill.playing{background:var(--acc);color:#fff}.pill.finished{background:var(--ok);color:#fff}
+.decks{display:grid;gap:8px;margin-top:10px}
+.decks label{display:flex;gap:12px;align-items:center;border:2px solid var(--line);border-radius:12px;padding:10px 14px;cursor:pointer}
+.decks input{width:22px;min-height:22px;flex:none;accent-color:var(--acc)}
+.decks label:has(input:checked){border-color:var(--acc)}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:16px 0}
 .opts label{display:grid;gap:6px;font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:13px;color:var(--soft);font-weight:600}
 .overlay{position:fixed;inset:0;background:#000a;display:grid;place-items:center;padding:20px;z-index:9}
 .overlay .panel{max-width:520px;width:100%}
 .pick{display:grid;gap:8px;margin-top:12px}
 .win{text-align:center;padding:40px 20px}
 .win .big{font-size:clamp(40px,7vw,72px);margin:12px 0}
 .note{font-size:13px;color:var(--soft);margin-top:18px}
-.deckbox{border:2px dashed var(--line);border-radius:14px;padding:14px;margin:14px 0}
 .bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:8px}.bar i{display:block;height:100%;background:var(--acc)}
+.turnbox{border-radius:16px;padding:18px;background:var(--acc);color:#fff;text-align:center;font-weight:800;font-size:22px}
 a{color:inherit}
-@media(max-width:900px){.play{grid-template-columns:minmax(0,1fr)}.qrcol{max-width:420px;width:100%;margin:auto}}
-@media(max-width:600px){.sleeve{width:96px}.sleeve .yr{font-size:22px}h2{font-size:28px}.big{font-size:40px}}
+@media(max-width:900px){.play,.lobby{grid-template-columns:minmax(0,1fr)}.qrcol{max-width:420px;width:100%;margin:auto}}
+@media(max-width:600px){.sleeve{width:96px}.sleeve .yr{font-size:22px}h2{font-size:28px}.big{font-size:40px}
+  .stack thead{display:none}.stack tr{display:grid;padding-block:10px;border-bottom:1px solid var(--line)}.stack td{border:0;padding:2px 0}}
 </style>
 </head>
 <body>
-<header><h1>Cronodisco</h1><span id="deckInfo"></span><button id="bUndo" type="button">Deshacer</button><button id="bNew" type="button">Nueva partida</button></header>
+<header><h1>Cronodisco</h1><nav id="nav" style="display:flex;gap:8px;flex-wrap:wrap"></nav></header>
 <div class="score" id="score" hidden></div>
 <main id="app"></main>
 <div id="ov"></div>
 <audio id="au" preload="auto"></audio>
 <p class="note" style="text-align:center;padding:0 16px 20px">Fragmentos de 30 s desde la API de Deezer. Uso privado, no comercial.</p>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script>
 {
+/* ===================== base ===================== */
 const $ = s => document.querySelector(s);
-const esc = v => String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const KEY = 'cronodisco-game-v2', DKEY = 'cronodisco-deck-v2';
-const au = $('#au');
-let DECK = [], S = null, hist = [], prev = {id:null, url:null, err:null};
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const app = $('#app'), au = $('#au');
+const cfg = window.CRONO_CONFIG || {};
+const sb = window.supabase && cfg.supabaseUrl && !/SUPABASE_/.test(cfg.supabaseUrl) ? window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey) : null;
+const BASE = location.origin + location.pathname;
+const KEY = 'cronodisco-game-v3', PKEY = 'cronodisco-player-v3';
+function ls(k, v){ try{ if(v===undefined) return JSON.parse(localStorage.getItem(k)||'null'); if(v===null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); }catch(e){ return null } }
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]] } return a }
+const fmtDate = d => d ? new Date(d).toLocaleString('es-CL', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}) : '';
+let timers = [];
+function clearTimers(){ timers.forEach(t => clearInterval(t)); timers = []; channels.forEach(c => sb && sb.removeChannel(c)); channels = [] }
+let channels = [];
+function overlay(html){ $('#ov').innerHTML = `<div class="overlay"><div class="panel">${html}</div></div>` }
+function closeOv(){ $('#ov').innerHTML = '' }
+function confirmBox(title, text, okLabel, onOk){
+  overlay(`<h2>${esc(title)}</h2><p class="hint">${esc(text)}</p><div class="row"><button type="button" id="cNo">Volver</button><button type="button" class="pri" id="cYes">${esc(okLabel)}</button></div>`);
+  $('#cNo').onclick = closeOv; $('#cYes').onclick = () => { closeOv(); onOk() };
+}
+function qrSvg(text){
+  try{ const q = qrcode(0, 'M'); q.addData(text); q.make(); return q.createSvgTag({cellSize: 6, margin: 2, scalable: true}) }
+  catch(e){ return `<p class="hint">${esc(text)}</p>` }
+}
 
-function ls(k, v){try{ if(v===undefined) return JSON.parse(localStorage.getItem(k)||'null'); if(v===null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); }catch(e){ return null }}
-DECK = ls(DKEY) || [];
-function store(){ ls(KEY, S) }
-function snap(){hist.push(JSON.stringify(S)); if(hist.length>30) hist.shift()}
-function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
-const yr = i => DECK[i][2];
-const P = () => S.players[S.turn];
-
-/* ---------- Deezer (JSONP: su API no permite CORS) ---------- */
+/* ===================== Deezer (JSONP) ===================== */
 function jsonp(url){
   return new Promise((res, rej) => {
     const cb = 'dz' + Math.random().toString(36).slice(2), s = document.createElement('script');
@@ -119,22 +156,6 @@ function jsonp(url){
     document.head.appendChild(s);
   });
 }
-async function prefetch(i){
-  const id = DECK[i][3]; prev = {id, url:null, err:null, card:i};
-  au.pause(); au.removeAttribute('src');
-  if(!id){ prev.err = 'Sin ID de Deezer'; return }
-  try{
-    const d = await jsonp('https://api.deezer.com/track/' + id);
-    if(prev.card !== i) return;
-    if(d.error || !d.preview){ prev.err = 'Sin fragmento disponible' } else { prev.url = d.preview; au.src = d.preview; au.load() }
-  }catch(e){ if(prev.card===i) prev.err = 'Sin conexión con Deezer' }
-  if(S && S.phase==='listen') paintPlayer();
-}
-function hideMeta(){ try{ if('mediaSession' in navigator) navigator.mediaSession.metadata = new MediaMetadata({title:'Cronodisco', artist:'¿Qué año es?'}) }catch(e){} }
-au.addEventListener('play', () => { hideMeta(); paintPlayer() });
-au.addEventListener('pause', paintPlayer);
-au.addEventListener('ended', paintPlayer);
-
 const norm = s => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\(.*?\)|\[.*?\]/g,' ').replace(/ - .*$/,' ').replace(/feat\..*$/,' ').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
 async function findDeezer(a, t){
   const a1 = a.split(/ feat\.| & | and | x |, /i)[0];
@@ -150,98 +171,304 @@ async function findDeezer(a, t){
     s += Math.min(10,(r.rank||0)/100000);
     if(s>bs){bs=s;best=r}
   }
-  return best && bs >= 60 ? best.id : null;
+  return best ? {id: best.id, score: bs} : null;
 }
 
-/* ---------- mazo ---------- */
+/* ===================== router ===================== */
+const params = new URLSearchParams(location.search);
+function nav(items){ $('#nav').innerHTML = items.map(([id,l,on]) => `<button type="button" data-nav="${id}" class="${on?'on':''}">${esc(l)}</button>`).join(''); $$('[data-nav]').forEach(b => b.onclick = () => go(b.dataset.nav)) }
+function go(view, arg){ clearTimers(); $('#score').hidden = true; closeOv(); VIEWS[view](arg) }
+const VIEWS = {};
+
+/* ===================== JUGADOR (celular) ===================== */
+VIEWS.join = () => {
+  nav([['admin','Administrador']]);
+  if(!sb){ app.innerHTML = `<section class="panel narrow"><h2>Falta configurar</h2><p class="hint">La app aún no está conectada a la base de datos.</p></section>`; return }
+  const saved = ls(PKEY), code = (params.get('c') || saved?.code || '').toUpperCase();
+  if(saved && saved.code === code && saved.player_id) return VIEWS.waiting();
+  app.innerHTML = `<section class="panel narrow">
+    <p class="who">Unirse a una partida</p><h2>¿Juegas?</h2>
+    <form id="fJoin"><div class="opts" style="grid-template-columns:1fr">
+      <label>Código de la partida<input id="jCode" value="${esc(code)}" maxlength="6" autocomplete="off" autocapitalize="characters" style="font-family:'Archivo Black';letter-spacing:.15em;text-transform:uppercase"></label>
+      <label>Tu nombre<input id="jName" value="${esc(saved?.name||'')}" maxlength="18" autocomplete="nickname"></label>
+    </div><button class="pri" type="submit" style="width:100%">Entrar a la sala</button></form>
+    <p class="hint" id="jMsg"></p></section>`;
+  $('#fJoin').onsubmit = async e => {
+    e.preventDefault(); $('#jMsg').textContent = 'Uniéndote…';
+    const {data, error} = await sb.rpc('join_game', {p_code: $('#jCode').value, p_name: $('#jName').value});
+    if(error){ $('#jMsg').innerHTML = `<span class="err">${esc(error.message)}</span>`; return }
+    ls(PKEY, {code: data.code, player_id: data.player_id, name: data.name});
+    history.replaceState(null, '', BASE + '?c=' + data.code);
+    VIEWS.waiting();
+  };
+};
+VIEWS.waiting = () => {
+  const me = ls(PKEY); if(!me) return VIEWS.join();
+  nav([['admin','Administrador']]);
+  const paint = st => {
+    if(!st){ app.innerHTML = `<section class="panel narrow"><h2>La partida ya no existe</h2><div class="row"><button class="pri" type="button" id="bOut">Unirme a otra</button></div></section>`; $('#bOut').onclick = () => { ls(PKEY,null); history.replaceState(null,'',BASE); go('join') }; return }
+    const inList = st.players.some(p => p.name.toLowerCase() === me.name.toLowerCase());
+    const myTurn = st.status==='playing' && st.turn_name && st.turn_name.toLowerCase() === me.name.toLowerCase();
+    const head = st.status==='lobby' ? (inList ? `<h2>Estás dentro, ${esc(me.name)}</h2><p class="hint">Espera a que el administrador inicie la partida.</p>` : `<h2>Te quitaron de la sala</h2>`)
+      : st.status==='playing' ? (myTurn ? `<div class="turnbox">¡Es tu turno! Mira el iPad</div>` : `<h2>Partida en curso</h2><p class="hint">Turno de ${esc(st.turn_name||'…')}</p>`)
+      : st.status==='finished' ? `<p class="who">Ganador</p><div class="big">${esc(st.winner||'')}</div>` : `<h2>Partida cancelada</h2>`;
+    app.innerHTML = `<section class="panel narrow">
+      <p class="who">Partida ${esc(st.code)} · ${esc(st.deck_names)} · gana quien junte ${st.win_cards}</p>${head}
+      <ul class="list">${st.players.map(p => `<li class="${p.name.toLowerCase()===me.name.toLowerCase()?'me':''} ${st.status==='playing'&&p.name===st.turn_name?'turn':''}"><span><b>${esc(p.name)}</b></span>${st.status==='lobby'?'':`<span><b>${p.cards}/${st.win_cards}</b> <span class="dots">${'●'.repeat(p.tokens)}</span></span>`}</li>`).join('')}</ul>
+      <div class="row">${st.status==='lobby' && inList ? `<button type="button" class="ghost" id="bLeave">Salir de la sala</button>` : `<button type="button" id="bOut">Unirme a otra partida</button>`}</div></section>`;
+    if($('#bLeave')) $('#bLeave').onclick = async () => { await sb.rpc('leave_game', {p_player_id: me.player_id}); ls(PKEY,null); go('join') };
+    if($('#bOut')) $('#bOut').onclick = () => { ls(PKEY,null); history.replaceState(null,'',BASE); go('join') };
+  };
+  const poll = async () => { const {data} = await sb.rpc('game_state', {p_code: me.code}); paint(data) };
+  poll(); timers.push(setInterval(poll, 3000));
+};
+
+/* ===================== ADMIN ===================== */
+let session = null, isAdmin = false;
+async function checkAdmin(){
+  const {data} = await sb.auth.getSession(); session = data.session;
+  if(!session){ isAdmin = false; return false }
+  const {data: ok} = await sb.rpc('is_admin'); isAdmin = !!ok; return isAdmin;
+}
+function adminNav(cur){ nav([['newgame','Nueva partida',cur==='newgame'],['games','Partidas',cur==='games'],['decks','Mazos',cur==='decks'],['logout','Salir']]) }
+VIEWS.logout = async () => { await sb.auth.signOut(); go('admin') };
+VIEWS.admin = async () => {
+  if(!sb){ app.innerHTML = `<section class="panel narrow"><h2>Falta configurar</h2><p class="hint">Agrega la URL y la clave pública de Supabase en config.js.</p></section>`; return }
+  nav([['join','Soy jugador']]);
+  app.innerHTML = `<section class="panel narrow"><p class="hint">Cargando…</p></section>`;
+  if(await checkAdmin()){ const g = ls(KEY); return g && !g.winner ? go('play') : go('newgame') }
+  const saved = ls('cronodisco-admin-email') || session?.user?.email || 'joacomunozv@gmail.com';
+  app.innerHTML = `<section class="panel narrow"><p class="who">Administrador</p><h2>Ingresar</h2>
+    ${session ? `<p class="err">La cuenta ${esc(session.user.email)} no es administradora.</p>` : ''}
+    <form id="fMail"><div class="opts" style="grid-template-columns:1fr">
+      <label>Correo<input id="lEmail" type="email" autocomplete="email" value="${esc(saved)}"></label></div>
+      <button class="pri" type="submit" style="width:100%">Enviarme un código</button></form>
+    <form id="fCode" hidden><div class="opts" style="grid-template-columns:1fr">
+      <label>Código del correo<input id="lCode" inputmode="numeric" autocomplete="one-time-code" maxlength="10" style="font-family:'Archivo Black';letter-spacing:.2em"></label></div>
+      <button class="pri" type="submit" style="width:100%">Ingresar</button></form>
+    <p class="hint" id="lMsg"></p></section>`;
+  $('#fMail').onsubmit = async e => {
+    e.preventDefault(); const email = $('#lEmail').value.trim(); if(!email) return;
+    $('#lMsg').textContent = 'Enviando código…'; ls('cronodisco-admin-email', email);
+    const {error} = await sb.auth.signInWithOtp({email, options: {shouldCreateUser: true, emailRedirectTo: BASE + '#admin'}});
+    if(error){ $('#lMsg').innerHTML = `<span class="err">${esc(error.message)}</span>`; return }
+    $('#fMail').hidden = true; $('#fCode').hidden = false; $('#lCode').focus();
+    $('#lMsg').textContent = `Te enviamos un correo a ${email}. Si trae un código, escríbelo aquí; si trae un enlace, ábrelo en este mismo navegador. Revisa también spam.`;
+  };
+  $('#fCode').onsubmit = async e => {
+    e.preventDefault(); $('#lMsg').textContent = 'Verificando…';
+    const {error} = await sb.auth.verifyOtp({email: $('#lEmail').value.trim(), token: $('#lCode').value.trim(), type: 'email'});
+    if(error){ $('#lMsg').innerHTML = `<span class="err">${esc(error.message)}</span>`; return }
+    go('admin');
+  };
+};
+
+/* --- Nueva partida: elegir mazos --- */
+async function loadDecks(){
+  const {data, error} = await sb.from('decks').select('id,name,description,active,created_at,songs(count)').order('created_at');
+  if(error) throw error;
+  return data.map(d => ({...d, n: d.songs?.[0]?.count || 0}));
+}
+VIEWS.newgame = async () => {
+  if(!isAdmin) return go('admin');
+  adminNav('newgame');
+  app.innerHTML = `<section class="panel narrow"><p class="hint">Cargando mazos…</p></section>`;
+  let decks; try{ decks = (await loadDecks()).filter(d => d.active && d.n) }catch(e){ app.innerHTML = `<section class="panel narrow"><p class="err">${esc(e.message)}</p></section>`; return }
+  const last = ls('cronodisco-lastdecks') || [];
+  app.innerHTML = `<section class="panel narrow">
+    <p class="who">Nueva partida</p><h2>Elige el mazo</h2>
+    <div class="decks">${decks.map((d,i) => `<label><input type="checkbox" value="${esc(d.id)}" ${last.includes(d.id) || (!last.length && i===0) ? 'checked' : ''}><span><b>${esc(d.name)}</b><br><small class="who">${d.n} canciones${d.description ? ' · ' + esc(d.description) : ''}</small></span></label>`).join('') || '<p class="hint">No hay mazos activos. Agrega uno en Mazos.</p>'}</div>
+    <p class="hint">Puedes marcar varios para combinarlos.</p>
+    <div class="opts">
+      <label>Cartas para ganar<input id="oWin" type="number" min="3" max="20" value="10" inputmode="numeric"></label>
+      <label>Fichas iniciales<input id="oTok" type="number" min="0" max="5" value="2" inputmode="numeric"></label>
+    </div>
+    <button class="pri" type="button" id="bCreate" style="width:100%">Crear sala</button><p class="hint" id="nMsg"></p></section>`;
+  $('#bCreate').onclick = async () => {
+    const ids = $$('.decks input:checked').map(i => i.value);
+    if(!ids.length){ $('#nMsg').innerHTML = '<span class="err">Elige al menos un mazo.</span>'; return }
+    ls('cronodisco-lastdecks', ids);
+    const names = decks.filter(d => ids.includes(d.id)).map(d => d.name).join(' + ');
+    const win = Math.max(3, Math.min(20, +$('#oWin').value||10)), tok = Math.max(0, Math.min(5, +$('#oTok').value||0));
+    const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    for(let k=0;k<5;k++){
+      const code = Array.from({length:4}, () => A[Math.floor(Math.random()*A.length)]).join('');
+      const {data, error} = await sb.from('games').insert({code, deck_ids: ids, deck_names: names, win_cards: win, start_tokens: tok}).select().single();
+      if(!error) return go('lobby', data.id);
+      if(!/duplicate|unique/i.test(error.message)){ $('#nMsg').innerHTML = `<span class="err">${esc(error.message)}</span>`; return }
+    }
+  };
+};
+
+/* --- Sala de espera --- */
+VIEWS.lobby = async gid => {
+  if(!isAdmin) return go('admin');
+  adminNav('games');
+  const {data: g, error} = await sb.from('games').select('*').eq('id', gid).single();
+  if(error){ app.innerHTML = `<section class="panel narrow"><p class="err">${esc(error.message)}</p></section>`; return }
+  const link = BASE + '?c=' + g.code;
+  app.innerHTML = `<div class="lobby">
+    <section class="panel"><p class="who">Escanea para unirte</p><div class="qr">${qrSvg(link)}</div>
+      <p class="who" style="margin-top:14px">o entra a la app y escribe</p><div class="code">${esc(g.code)}</div></section>
+    <section class="panel"><p class="who">${esc(g.deck_names)} · gana quien junte ${g.win_cards} · ${g.start_tokens} fichas iniciales</p>
+      <h2>Jugadores en la sala</h2><ul class="list" id="pl"><li><small>Esperando jugadores…</small></li></ul>
+      <form class="row" id="fAddP"><input id="pAdd" maxlength="18" placeholder="Agregar jugador sin celular" aria-label="Nombre del jugador"><button type="submit" style="flex:0 0 auto">Agregar</button></form>
+      <div class="row"><button type="button" class="ghost danger" id="bCancel">Cancelar partida</button><button type="button" class="pri" id="bStart" disabled>Empezar partida</button></div>
+      <p class="hint" id="lbMsg"></p></section></div>`;
+  let players = [];
+  const paint = () => {
+    $('#pl').innerHTML = players.length ? players.map(p => `<li><span><b>${esc(p.name)}</b> <small>· ${esc(p.joined_from)} · ${fmtDate(p.joined_at)}</small></span><button type="button" class="ghost" data-rm="${esc(p.id)}" aria-label="Quitar a ${esc(p.name)}">Quitar</button></li>`).join('') : '<li><small>Esperando jugadores…</small></li>';
+    $('#bStart').disabled = players.length < 1;
+    $$('[data-rm]').forEach(b => b.onclick = async () => { await sb.from('players').delete().eq('id', b.dataset.rm); refresh() });
+  };
+  const refresh = async () => { const {data} = await sb.from('players').select('*').eq('game_id', gid).order('joined_at'); players = data || []; if($('#pl')) paint() };
+  refresh(); timers.push(setInterval(refresh, 4000));
+  channels.push(sb.channel('lobby-' + gid).on('postgres_changes', {event: '*', schema: 'public', table: 'players', filter: 'game_id=eq.' + gid}, refresh).subscribe());
+  $('#fAddP').onsubmit = async e => {
+    e.preventDefault(); const name = $('#pAdd').value.trim(); if(!name) return;
+    const {error} = await sb.from('players').insert({game_id: gid, name, joined_from: 'iPad'});
+    $('#lbMsg').innerHTML = error ? `<span class="err">${esc(/duplicate|unique/i.test(error.message) ? 'Ya hay un jugador con ese nombre.' : error.message)}</span>` : '';
+    $('#pAdd').value = ''; refresh();
+  };
+  $('#bCancel').onclick = () => confirmBox('¿Cancelar la partida?', 'Los jugadores verán que se canceló.', 'Cancelar partida', async () => { await sb.from('games').update({status:'cancelled', finished_at: new Date().toISOString()}).eq('id', gid); go('games') });
+  $('#bStart').onclick = () => startGame(g, players);
+};
+
+/* --- Historial --- */
+VIEWS.games = async () => {
+  if(!isAdmin) return go('admin');
+  adminNav('games');
+  const {data, error} = await sb.from('games').select('id,code,deck_names,status,winner,created_at,win_cards,players(name,cards)').order('created_at', {ascending: false}).limit(40);
+  if(error){ app.innerHTML = `<section class="panel"><p class="err">${esc(error.message)}</p></section>`; return }
+  const lbl = {lobby:'En sala', playing:'Jugando', finished:'Terminada', cancelled:'Cancelada'};
+  const cur = ls(KEY);
+  app.innerHTML = `<section class="panel"><p class="who">Historial</p><h2>Partidas</h2>
+    ${cur && !cur.winner ? `<div class="row"><button class="pri" type="button" id="bResume">Volver a la partida en curso (${esc(cur.code)})</button></div>` : ''}
+    <table class="stack"><thead><tr><th>Código</th><th>Fecha</th><th>Mazo</th><th>Estado</th><th>Jugadores</th><th>Ganador</th><th></th></tr></thead><tbody>
+    ${data.map(g => `<tr><td><b>${esc(g.code)}</b></td><td>${fmtDate(g.created_at)}</td><td>${esc(g.deck_names)}</td><td><span class="pill ${esc(g.status)}">${lbl[g.status]||esc(g.status)}</span></td>
+      <td>${g.players.map(p => esc(p.name) + (g.status==='lobby' ? '' : ` (${p.cards})`)).join(', ') || '<small class="who">nadie aún</small>'}</td><td>${esc(g.winner||'')}</td>
+      <td>${g.status==='lobby' ? `<button type="button" data-open="${esc(g.id)}">Abrir sala</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="7" class="who">Aún no hay partidas.</td></tr>'}
+    </tbody></table></section>`;
+  $$('[data-open]').forEach(b => b.onclick = () => go('lobby', b.dataset.open));
+  if($('#bResume')) $('#bResume').onclick = () => go('play');
+};
+
+/* --- Mazos --- */
 function parseCSV(txt){
   const rows = []; let row = [], f = '', q = false;
   for(let i=0;i<txt.length;i++){
     const c = txt[i];
     if(q){ if(c==='"'){ if(txt[i+1]==='"'){f+='"';i++} else q=false } else f+=c }
     else if(c==='"') q = true;
-    else if(c===',' || c===';'){ row.push(f); f='' }
+    else if(c===',' || c===';' || c==='\t'){ row.push(f); f='' }
     else if(c==='\n' || c==='\r'){ if(c==='\r' && txt[i+1]==='\n') i++; row.push(f); rows.push(row); row=[]; f='' }
     else f += c;
   }
   if(f || row.length){ row.push(f); rows.push(row) }
   return rows.filter(r => r.some(x => x.trim()));
 }
-async function importFile(file, add){
-  const txt = await file.text(); let cards = [];
-  if(/^\s*\[/.test(txt)) cards = JSON.parse(txt);
-  else {
-    const rows = parseCSV(txt), h = rows.shift().map(x => norm(x));
-    const col = names => h.findIndex(x => names.includes(x));
-    const ia = col(['artista','artist']), it = col(['titulo','title','cancion','song']), iy = col(['ano','anio','year','year original']), id = col(['deezer','deezer id','id']);
-    if(ia<0 || it<0 || iy<0) throw new Error('El CSV necesita columnas artista, titulo y ano');
-    cards = rows.map(r => [r[ia].trim(), r[it].trim(), parseInt(r[iy]), id>=0 && r[id] ? +r[id] : null]);
-  }
-  cards = cards.filter(c => c[0] && c[1] && c[2] > 1800);
-  const missing = cards.filter(c => !c[3]);
-  for(let k=0;k<missing.length;k++){
-    $('#prog').innerHTML = `Buscando en Deezer ${k+1} de ${missing.length}…<div class="bar"><i style="width:${(k+1)/missing.length*100}%"></i></div>`;
-    try{ missing[k][3] = await findDeezer(missing[k][0], missing[k][1]) }catch(e){}
-  }
-  const ok = cards.filter(c => c[3]);
-  DECK = add ? DECK.concat(ok) : ok;
-  ls(DKEY, DECK); ls(KEY, null);
-  return {total:cards.length, ok:ok.length, sin:cards.length-ok.length};
-}
-
-/* ---------- setup ---------- */
-function setupView(names, msg){
-  $('#score').hidden = true; $('#deckInfo').textContent = '';
-  names = names || ['Jugador 1','Jugador 2'];
-  const saved = ls(KEY), yrs = DECK.map(d=>d[2]);
-  $('#app').innerHTML = `<section class="setup panel">
-    <h2>Nueva partida</h2>
-    <div class="deckbox">
-      <p style="margin:0"><b>Mazo:</b> ${DECK.length ? `${DECK.length} canciones (${Math.min(...yrs)}–${Math.max(...yrs)})` : 'vacío'}</p>
-      <p class="hint">Carga un archivo de mazo (JSON o CSV con columnas artista, titulo, ano y opcionalmente deezer). Si falta el ID de Deezer, la app lo busca.</p>
-      <div class="row"><label class="btn" for="fRep">Cargar mazo</label><label class="btn" for="fAdd">Agregar canciones</label></div>
-      <input type="file" id="fRep" accept=".json,.csv,text/csv,application/json" hidden><input type="file" id="fAdd" accept=".json,.csv,text/csv,application/json" hidden>
-      <p class="hint" id="prog">${msg ? esc(msg) : ''}</p>
-    </div>
-    ${saved && !saved.winner && DECK.length ? `<div class="row"><button class="pri" id="bResume" type="button">Continuar partida guardada</button></div>` : ''}
-    <div class="players" id="pl">${names.map((n,i)=>`<div class="p"><input id="pn${i}" value="${esc(n)}" aria-label="Nombre jugador ${i+1}" maxlength="18"><button type="button" data-rm="${i}" aria-label="Quitar">✕</button></div>`).join('')}</div>
-    <div class="row"><button type="button" id="bAdd" ${names.length>=10?'disabled':''}>Agregar jugador o equipo</button></div>
-    <div class="opts">
-      <label>Cartas para ganar<input id="oWin" type="number" min="3" max="20" value="10" inputmode="numeric"></label>
-      <label>Fichas iniciales<input id="oTok" type="number" min="0" max="5" value="2" inputmode="numeric"></label>
-    </div>
-    <div class="row"><button class="pri" id="bStart" type="button" ${DECK.length < names.length + 5 ? 'disabled' : ''}>Repartir y empezar</button></div>
-  </section>`;
-  const cur = () => [...document.querySelectorAll('#pl input')].map(i=>i.value);
-  $('#bAdd').onclick = () => setupView([...cur(), `Jugador ${cur().length+1}`]);
-  document.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => {const c = cur(); if(c.length>2){c.splice(+b.dataset.rm,1); setupView(c)}});
-  for(const [id, add] of [['#fRep', false], ['#fAdd', true]]) $(id).onchange = async e => {
-    const f = e.target.files[0]; if(!f) return;
-    try{ const r = await importFile(f, add); setupView(cur(), `Listo: ${r.ok} canciones cargadas${r.sin ? `, ${r.sin} sin coincidencia en Deezer` : ''}.`) }
-    catch(err){ setupView(cur(), 'No se pudo leer el archivo: ' + err.message) }
+VIEWS.decks = async flash => {
+  if(!isAdmin) return go('admin');
+  adminNav('decks');
+  let decks; try{ decks = await loadDecks() }catch(e){ app.innerHTML = `<section class="panel"><p class="err">${esc(e.message)}</p></section>`; return }
+  app.innerHTML = `<section class="panel"><p class="who">Mazos precargados</p><h2>Mazos</h2>
+      <table class="stack"><thead><tr><th>Mazo</th><th>Canciones</th><th>Activo</th><th></th></tr></thead><tbody>
+      ${decks.map(d => `<tr><td><b>${esc(d.name)}</b><br><small class="who">${esc(d.description||'')}</small></td><td>${d.n}</td>
+        <td><input type="checkbox" data-act="${esc(d.id)}" ${d.active?'checked':''} aria-label="Activo" style="width:24px;min-height:24px;accent-color:var(--acc)"></td>
+        <td><button type="button" class="ghost danger" data-del="${esc(d.id)}" data-name="${esc(d.name)}">Eliminar</button></td></tr>`).join('') || '<tr><td colspan="4" class="who">Aún no hay mazos.</td></tr>'}
+      </tbody></table></section>
+    <section class="panel"><h3>Agregar mazo desde CSV</h3>
+      <p class="hint">Exporta una pestaña de tu Google Sheets (Archivo → Descargar → CSV). Columnas: artista, titulo, ano y, si las tienes, deezer y estado. Las canciones sin ID de Deezer se buscan solas; las de coincidencia débil quedan como "Revisar".</p>
+      <div class="opts"><label>Nombre del mazo<input id="dName" maxlength="40"></label><label>Descripción<input id="dDesc" maxlength="80"></label></div>
+      <label class="btn" for="dFile" style="width:100%">Elegir archivo CSV y cargar</label><input type="file" id="dFile" accept=".csv,text/csv" hidden>
+      <div class="hint" id="dMsg">${flash || ''}</div></section>`;
+  $$('[data-act]').forEach(c => c.onchange = async () => { await sb.from('decks').update({active: c.checked}).eq('id', c.dataset.act) });
+  $$('[data-del]').forEach(b => b.onclick = () => confirmBox(`¿Eliminar "${b.dataset.name}"?`, 'Se borran sus canciones. Las partidas anteriores quedan en el historial.', 'Eliminar', async () => { await sb.from('decks').delete().eq('id', b.dataset.del); go('decks') }));
+  $('#dFile').onchange = async e => {
+    const file = e.target.files[0]; if(!file) return;
+    const name = $('#dName').value.trim() || file.name.replace(/\.csv$/i, '');
+    const msg = h => $('#dMsg').innerHTML = h;
+    try{
+      const rows = parseCSV(await file.text()), h = rows.shift().map(x => norm(x));
+      const col = names => h.findIndex(x => names.includes(x));
+      const ia = col(['artista','artist']), it = col(['titulo','title','cancion','song','track name']), iy = col(['ano','anio','year']), idz = col(['deezer','deezer id']), ie = col(['estado','status']);
+      if(ia<0 || it<0 || iy<0) throw new Error('El CSV necesita columnas artista, titulo y ano.');
+      const songs = rows.map(r => ({artist: (r[ia]||'').trim(), title: (r[it]||'').trim(), year: parseInt(r[iy]), deezer_id: idz>=0 && +r[idz] ? +r[idz] : null, status: ie>=0 && r[ie] ? r[ie].trim() : 'OK'})).filter(s => s.artist && s.title && s.year > 1800);
+      if(!songs.length) throw new Error('No encontré canciones válidas.');
+      const miss = songs.filter(s => !s.deezer_id);
+      for(let k=0;k<miss.length;k++){
+        msg(`Buscando en Deezer ${k+1} de ${miss.length}…<div class="bar"><i style="width:${(k+1)/miss.length*100}%"></i></div>`);
+        try{ const r = await findDeezer(miss[k].artist, miss[k].title); if(r){ miss[k].deezer_id = r.id; if(r.score < 90) miss[k].status = 'Revisar' } else miss[k].status = 'Sin fragmento' }catch(err){ miss[k].status = 'Sin fragmento' }
+      }
+      msg('Guardando…');
+      const {data: d, error} = await sb.from('decks').insert({name, description: $('#dDesc').value.trim()}).select().single();
+      if(error) throw new Error(/duplicate|unique/i.test(error.message) ? 'Ya existe un mazo con ese nombre.' : error.message);
+      for(let k=0;k<songs.length;k+=500){ const {error: e2} = await sb.from('songs').insert(songs.slice(k,k+500).map(s => ({...s, deck_id: d.id}))); if(e2) throw e2 }
+      const rev = songs.filter(s => s.status==='Revisar').length, sin = songs.filter(s => s.status==='Sin fragmento').length;
+      go('decks', `Listo: ${songs.length} canciones en "${esc(name)}"${rev?`, ${rev} para revisar`:''}${sin?`, ${sin} sin fragmento (no se usan)`:''}.`);
+    }catch(err){ msg(`<span class="err">${esc(err.message)}</span>`) }
   };
-  if($('#bResume')) $('#bResume').onclick = () => {S = saved; hist = []; render(); prefetch(S.card)};
-  $('#bStart').onclick = () => {
-    const ns = cur().map(s=>s.trim()).filter(Boolean); if(ns.length<1) return;
-    const win = Math.max(3, Math.min(20, +$('#oWin').value||10)), tok = Math.max(0, Math.min(5, +$('#oTok').value||0));
-    const deck = shuffle(DECK.map((_,i)=>i));
-    const players = ns.map(n => ({name:n, tokens:tok, tl:[deck.pop()]}));
-    let first = 0; players.forEach((p,i)=>{ if(yr(p.tl[0]) < yr(players[first].tl[0])) first = i });
-    S = {players, deck, discard:[], turn:first, win, phase:'listen', card:deck.pop(), slot:null, ch:[], named:false, res:null, winner:null};
-    hist = []; render(); prefetch(S.card);
-  };
-}
+};
 
-/* ---------- juego ---------- */
-function insertSorted(tl, c){const i = tl.findIndex(k => yr(k) > yr(c)); i<0 ? tl.push(c) : tl.splice(i,0,c)}
-function slotOk(tl, k, c){const y = yr(c); return (k===0 || y >= yr(tl[k-1])) && (k===tl.length || y <= yr(tl[k]))}
-function draw(){ if(!S.deck.length){ S.deck = shuffle(S.discard.splice(0)) } return S.deck.length ? S.deck.pop() : S.card }
+/* ===================== JUEGO (iPad) ===================== */
+let S = null, DECK = [], hist = [], prev = {}, syncT = null;
+const yr = i => DECK[i][2];
+const P = () => S.players[S.turn];
+function store(){ ls(KEY, S); ls(KEY + '-deck', DECK) }
+function snap(){ hist.push(JSON.stringify(S)); if(hist.length>30) hist.shift() }
+
+async function startGame(g, players){
+  $('#bStart').disabled = true; $('#lbMsg').textContent = 'Cargando canciones…';
+  let all = [];
+  for(let from=0;;from+=1000){
+    const {data, error} = await sb.from('songs').select('artist,title,year,deezer_id').in('deck_id', g.deck_ids).neq('status','Sin fragmento').not('deezer_id','is',null).range(from, from+999);
+    if(error){ $('#lbMsg').innerHTML = `<span class="err">${esc(error.message)}</span>`; $('#bStart').disabled = false; return }
+    all = all.concat(data); if(data.length < 1000) break;
+  }
+  const seen = new Set();
+  DECK = all.filter(s => !seen.has(s.deezer_id) && seen.add(s.deezer_id)).map(s => [s.artist, s.title, s.year, s.deezer_id]);
+  if(DECK.length < players.length + 5){ $('#lbMsg').innerHTML = '<span class="err">El mazo tiene muy pocas canciones.</span>'; $('#bStart').disabled = false; return }
+  const deck = shuffle(DECK.map((_,i)=>i));
+  const ps = players.map(p => ({id: p.id, name: p.name, tokens: g.start_tokens, tl: [deck.pop()]}));
+  let first = 0; ps.forEach((p,i) => { if(yr(p.tl[0]) < yr(ps[first].tl[0])) first = i });
+  S = {gameId: g.id, code: g.code, deckNames: g.deck_names, players: ps, deck, discard: [], turn: first, win: g.win_cards, phase: 'listen', card: deck.pop(), slot: null, ch: [], named: false, res: null, winner: null};
+  hist = []; store();
+  await sb.from('games').update({status: 'playing', started_at: new Date().toISOString(), turn_name: ps[first].name}).eq('id', g.id);
+  go('play');
+}
+function sync(){
+  if(!sb || !S?.gameId) return;
+  clearTimeout(syncT);
+  syncT = setTimeout(async () => {
+    const s = S; if(!s) return;
+    await Promise.all(s.players.map(p => sb.from('players').update({cards: p.tl.length, tokens: p.tokens}).eq('id', p.id)));
+    const upd = s.winner != null ? {status: 'finished', winner: s.players[s.winner].name, turn_name: null, finished_at: new Date().toISOString()} : {turn_name: s.players[s.turn].name};
+    await sb.from('games').update(upd).eq('id', s.gameId);
+  }, 600);
+}
+async function prefetch(i){
+  const id = DECK[i]?.[3]; prev = {id, url:null, err:null, card:i};
+  au.pause(); au.removeAttribute('src');
+  if(!id){ prev.err = 'Sin ID de Deezer'; return paintPlayer() }
+  try{
+    const d = await jsonp('https://api.deezer.com/track/' + id);
+    if(prev.card !== i) return;
+    if(d.error || !d.preview) prev.err = 'Sin fragmento disponible'; else { prev.url = d.preview; au.src = d.preview; au.load() }
+  }catch(e){ if(prev.card===i) prev.err = 'Sin conexión con Deezer' }
+  paintPlayer();
+}
+function hideMeta(){ try{ if('mediaSession' in navigator) navigator.mediaSession.metadata = new MediaMetadata({title:'Cronodisco', artist:'¿Qué año es?'}) }catch(e){} }
+au.addEventListener('play', () => { hideMeta(); paintPlayer() });
+au.addEventListener('pause', paintPlayer); au.addEventListener('ended', paintPlayer);
+
+function insertSorted(tl, c){ const i = tl.findIndex(k => yr(k) > yr(c)); i<0 ? tl.push(c) : tl.splice(i,0,c) }
+function slotOk(tl, k, c){ const y = yr(c); return (k===0 || y >= yr(tl[k-1])) && (k===tl.length || y <= yr(tl[k])) }
+function draw(){ if(!S.deck.length) S.deck = shuffle(S.discard.splice(0)); return S.deck.length ? S.deck.pop() : S.card }
 function newCard(){ S.discard.push(S.card); S.card = draw(); S.slot = null; prefetch(S.card) }
 
 function scoreBar(){
   $('#score').hidden = false;
-  $('#score').innerHTML = S.players.map((p,i)=>`<div class="chip ${i===S.turn?'on':''}"><span>${esc(p.name)}</span><b>${p.tl.length}/${S.win}</b><span class="dots" aria-label="${p.tokens} fichas">${'●'.repeat(p.tokens)}${'○'.repeat(Math.max(0,5-p.tokens))}</span></div>`).join('');
-  $('#deckInfo').textContent = `${S.deck.length} en el mazo`;
+  $('#score').innerHTML = S.players.map((p,i)=>`<div class="chip ${i===S.turn?'on':''}"><span>${esc(p.name)}</span><b>${p.tl.length}/${S.win}</b><span class="dots" aria-label="${p.tokens} fichas">${'●'.repeat(p.tokens)}${'○'.repeat(Math.max(0,5-p.tokens))}</span></div>`).join('') + `<div class="chip" style="margin-left:auto">Sala ${esc(S.code)} · ${S.deck.length} en el mazo</div>`;
 }
 function timeline(p, interactive){
   const tl = p.tl; let h = '';
@@ -249,7 +476,7 @@ function timeline(p, interactive){
     const chs = S.ch.filter(c=>c.slot===k);
     const cls = ['slot', S.slot===k?'sel':'', chs.length?'ch':'', S.phase==='reveal' && S.res && !S.res.ok && slotOk(tl,k,S.card) ? 'right':''].join(' ');
     h += `<button type="button" class="${cls}" data-slot="${k}" ${interactive?'':'disabled'} aria-label="Ubicar en posición ${k+1}">${S.slot===k?'▼':'+'}${chs.map(c=>`<span class="tag">${esc(S.players[c.p].name.slice(0,6))}</span>`).join('')}</button>`;
-    if(k<tl.length){const c = DECK[tl[k]]; h += `<div class="sleeve"><span class="yr">${c[2]}</span><small>${esc(c[0])}<br>${esc(c[1])}</small></div>`}
+    if(k<tl.length){ const c = DECK[tl[k]]; h += `<div class="sleeve"><span class="yr">${c[2]}</span><small>${esc(c[0])}<br>${esc(c[1])}</small></div>` }
   }
   return `<div class="tl">${h}</div>`;
 }
@@ -260,19 +487,29 @@ function paintPlayer(){
   box.innerHTML = `<div class="deck"><button type="button" class="rec ${playing?'spin':''}" id="bPlay" aria-label="${esc(lbl)}" ${prev.url?'':'disabled'}></button><span class="playlbl">${esc(lbl)}</span></div>`;
   $('#bPlay').onclick = () => { if(au.paused || au.ended){ if(au.ended) au.currentTime = 0; au.play().catch(()=>{}) } else au.pause() };
 }
+VIEWS.play = () => {
+  S = ls(KEY); DECK = ls(KEY + '-deck') || [];
+  if(!S || !DECK.length) return go(isAdmin ? 'newgame' : 'admin');
+  nav([['undo','Deshacer'],['endgame','Terminar'],['games','Partidas']]);
+  render(); if(S.phase==='listen' && S.winner==null) prefetch(S.card);
+};
+VIEWS.undo = () => { if(hist.length && S){ const before = S.card; S = JSON.parse(hist.pop()); render(); if(S.card!==before && S.phase==='listen') prefetch(S.card) } nav([['undo','Deshacer'],['endgame','Terminar'],['games','Partidas']]) };
+VIEWS.endgame = () => {
+  if(!S) return go('newgame');
+  nav([['undo','Deshacer'],['endgame','Terminar'],['games','Partidas']]); render();
+  confirmBox('¿Terminar esta partida?', 'Quedará como cancelada en el historial.', 'Terminar', async () => { au.pause(); const id = S.gameId; S = null; ls(KEY, null); if(sb && id) await sb.from('games').update({status:'cancelled', turn_name:null, finished_at:new Date().toISOString()}).eq('id', id); go('newgame') });
+};
 function render(){
-  if(!S){ setupView(); return }
-  store(); scoreBar();
+  store(); sync(); scoreBar();
   if(S.winner!=null){
     au.pause();
     const w = S.players[S.winner];
-    $('#app').innerHTML = `<section class="panel win"><p class="who">Ganador</p><div class="big">${esc(w.name)}</div><p>${w.tl.length} canciones en orden.</p>${timeline(w,false)}<div class="row" style="justify-content:center"><button class="pri" id="bAgain" type="button">Jugar otra vez</button></div></section>`;
-    $('#bAgain').onclick = () => { const n = S.players.map(p=>p.name); S = null; ls(KEY,null); setupView(n) };
+    app.innerHTML = `<section class="panel win"><p class="who">Ganador</p><div class="big">${esc(w.name)}</div><p>${w.tl.length} canciones en orden.</p>${timeline(w,false)}<div class="row" style="justify-content:center"><button class="pri" id="bAgain" type="button">Nueva partida</button></div></section>`;
+    $('#bAgain').onclick = () => { S = null; ls(KEY,null); go('newgame') };
     return;
   }
   const p = P(), listen = S.phase==='listen', c = DECK[S.card];
-  const left = listen ? `
-      <div id="player"></div>
+  const left = listen ? `<div id="player"></div>
       <div class="row">
         <button type="button" id="bRe">Repetir</button>
         <button type="button" id="bSkip" ${p.tokens<1?'disabled':''}>Saltar (−1 ficha)</button>
@@ -288,7 +525,7 @@ function render(){
         <button type="button" class="pri" id="bNext">Siguiente turno</button>
       </div>`;
   const others = S.players.map((q,i)=>({q,i})).filter(o=>o.i!==S.turn && o.q.tokens>0 && !S.ch.some(x=>x.p===o.i));
-  $('#app').innerHTML = `<div class="play">
+  app.innerHTML = `<div class="play">
     <section class="panel qrcol"><p class="who">Turno de</p><h2>${esc(p.name)}</h2>${left}</section>
     <section class="panel">
       <p class="who">${listen ? (S.slot==null ? 'Toca dónde va la canción en tu línea de tiempo' : 'Posición elegida. Los demás pueden desafiar antes de revelar.') : 'Resultado'}</p>
@@ -298,7 +535,7 @@ function render(){
         <button type="button" class="pri" id="bRev" ${S.slot==null?'disabled':''}>Revelar</button></div>
         ${S.chMode!=null ? `<p class="hint">${esc(S.players[S.chMode].name)}: toca otra posición para desafiar.</p>`:''}` : ''}
     </section></div>`;
-  document.querySelectorAll('[data-slot]').forEach(b => b.onclick = () => {
+  $$('[data-slot]').forEach(b => b.onclick = () => {
     const k = +b.dataset.slot;
     if(S.chMode!=null){
       if(k===S.slot || S.ch.some(x=>x.slot===k)) return;
@@ -310,49 +547,48 @@ function render(){
   if(listen){
     paintPlayer();
     $('#bRe').onclick = () => { if(prev.url){ au.currentTime = 0; au.play().catch(()=>{}) } };
-    $('#bSkip').onclick = () => {snap(); p.tokens--; newCard(); render()};
-    $('#bNoPlay').onclick = () => {snap(); newCard(); render()};
-    $('#bBuy').onclick = () => {snap(); p.tokens-=3; S.discard.push(S.card); const b = draw(); insertSorted(p.tl,b); finishTurn()};
-    $('#bCh').onclick = () => modalPick(others);
+    $('#bSkip').onclick = () => { snap(); p.tokens--; newCard(); render() };
+    $('#bNoPlay').onclick = () => { snap(); newCard(); render() };
+    $('#bBuy').onclick = () => { snap(); p.tokens-=3; S.discard.push(S.card); insertSorted(p.tl, draw()); finishTurn() };
+    $('#bCh').onclick = () => {
+      overlay(`<h2>¿Quién desafía?</h2><div class="pick">${others.map(o=>`<button type="button" data-who="${o.i}">${esc(o.q.name)} · ${o.q.tokens} fichas</button>`).join('')}<button type="button" id="bX">Cancelar</button></div>`);
+      $$('[data-who]').forEach(b => b.onclick = () => { S.chMode = +b.dataset.who; closeOv(); render() });
+      $('#bX').onclick = closeOv;
+    };
     $('#bRev').onclick = reveal;
   } else {
-    $('#bNamed').onclick = () => {snap(); p.tokens = Math.min(5,p.tokens+1); S.named = true; render()};
-    $('#bNext').onclick = () => {snap(); finishTurn()};
+    $('#bNamed').onclick = () => { snap(); p.tokens = Math.min(5,p.tokens+1); S.named = true; render() };
+    $('#bNext').onclick = () => { snap(); finishTurn() };
   }
-}
-function modalPick(others){
-  $('#ov').innerHTML = `<div class="overlay"><div class="panel"><h2>¿Quién desafía?</h2><div class="pick">${others.map(o=>`<button type="button" data-who="${o.i}">${esc(o.q.name)} · ${o.q.tokens} fichas</button>`).join('')}<button type="button" id="bX">Cancelar</button></div></div></div>`;
-  document.querySelectorAll('[data-who]').forEach(b => b.onclick = () => {S.chMode = +b.dataset.who; $('#ov').innerHTML=''; render()});
-  $('#bX').onclick = () => $('#ov').innerHTML='';
 }
 function reveal(){
   snap(); au.pause();
   const p = P(), ok = slotOk(p.tl, S.slot, S.card);
   let msg;
-  if(ok){ insertSorted(p.tl, S.card); S.slot=null; S.ch=[]; msg = '¡Correcto!'; }
+  if(ok){ insertSorted(p.tl, S.card); S.slot=null; S.ch=[]; msg = '¡Correcto!' }
   else {
     const w = S.ch.find(x => slotOk(p.tl, x.slot, S.card));
-    if(w){ insertSorted(S.players[w.p].tl, S.card); msg = `Incorrecto: ${S.players[w.p].name} se la roba`; }
-    else { S.discard.push(S.card); msg = 'Incorrecto: carta descartada'; }
+    if(w){ insertSorted(S.players[w.p].tl, S.card); msg = `Incorrecto: ${S.players[w.p].name} se la roba` }
+    else { S.discard.push(S.card); msg = 'Incorrecto: carta descartada' }
   }
   S.res = {ok, msg}; S.phase = 'reveal'; S.chMode = null;
   checkWin(); render();
 }
-function checkWin(){ const i = S.players.findIndex(q => q.tl.length >= S.win); if(i>=0) S.winner = i; }
+function checkWin(){ const i = S.players.findIndex(q => q.tl.length >= S.win); if(i>=0) S.winner = i }
 function finishTurn(){
   checkWin();
   if(S.winner==null){ S.turn = (S.turn+1) % S.players.length; S.card = draw(); S.phase='listen'; S.slot=null; S.ch=[]; S.named=false; S.res=null; S.chMode=null; prefetch(S.card) }
   render();
 }
 
-$('#bUndo').onclick = () => { if(hist.length && S){ const before = S.card; S = JSON.parse(hist.pop()); render(); if(S.card!==before && S.phase==='listen') prefetch(S.card) } };
-$('#bNew').onclick = () => {
-  if(!S){ setupView(); return }
-  $('#ov').innerHTML = `<div class="overlay"><div class="panel"><h2>¿Terminar esta partida?</h2><p class="hint">Se pierde el avance actual.</p><div class="row"><button type="button" id="bNo">Seguir jugando</button><button type="button" class="pri" id="bYes">Nueva partida</button></div></div></div>`;
-  $('#bNo').onclick = () => $('#ov').innerHTML='';
-  $('#bYes').onclick = () => {$('#ov').innerHTML=''; au.pause(); const names = S.players.map(p=>p.name); S=null; ls(KEY,null); setupView(names)};
-};
-setupView();
+/* ===================== inicio ===================== */
+const authRedirect = /access_token|refresh_token|type=magiclink|error_description/.test(location.hash) || params.has('code');
+if(sb) sb.auth.onAuthStateChange((ev, s) => {
+  session = s;
+  if(ev === 'SIGNED_OUT') isAdmin = false;
+  if(ev === 'SIGNED_IN' && authRedirect){ history.replaceState(null, '', BASE + '#admin'); go('admin') }
+});
+go(authRedirect || location.hash === '#admin' || (!params.get('c') && ls(KEY)) ? 'admin' : 'join');
 }
 </script>
 </body>
