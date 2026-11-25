@@ -230,7 +230,26 @@ async function checkAdmin(){
   if(!session){ isAdmin = false; return false }
   const {data: ok} = await sb.rpc('is_admin'); isAdmin = !!ok; return isAdmin;
 }
-function adminNav(cur){ nav([['newgame','Nueva partida',cur==='newgame'],['games','Partidas',cur==='games'],['decks','Mazos',cur==='decks'],['logout','Salir']]) }
+function adminNav(cur){ nav([['newgame','Nueva partida',cur==='newgame'],['games','Partidas',cur==='games'],['decks','Mazos',cur==='decks'],['account','Cuenta',cur==='account'],['logout','Salir']]) }
+VIEWS.account = () => {
+  if(!isAdmin) return go('admin');
+  adminNav('account');
+  app.innerHTML = `<section class="panel narrow"><p class="who">${esc(session?.user?.email || '')}</p><h2>Contraseña</h2>
+    <p class="hint">Crea o cambia tu contraseña para ingresar desde cualquier equipo sin esperar correos. Mínimo 8 caracteres.</p>
+    <form id="fPw"><div class="opts" style="grid-template-columns:1fr">
+      <label>Nueva contraseña<input id="pw1" type="password" autocomplete="new-password" minlength="8"></label>
+      <label>Repítela<input id="pw2" type="password" autocomplete="new-password" minlength="8"></label></div>
+      <button class="pri" type="submit" style="width:100%">Guardar contraseña</button></form><p class="hint" id="pwMsg"></p></section>`;
+  $('#fPw').onsubmit = async e => {
+    e.preventDefault(); const a = $('#pw1').value, b = $('#pw2').value;
+    if(a.length < 8){ $('#pwMsg').innerHTML = '<span class="err">Usa al menos 8 caracteres.</span>'; return }
+    if(a !== b){ $('#pwMsg').innerHTML = '<span class="err">Las contraseñas no coinciden.</span>'; return }
+    $('#pwMsg').textContent = 'Guardando…';
+    const {error} = await sb.auth.updateUser({password: a});
+    $('#pwMsg').innerHTML = error ? `<span class="err">${esc(error.message)}</span>` : 'Listo. Desde ahora puedes ingresar con tu correo y esta contraseña.';
+    if(!error){ $('#pw1').value = ''; $('#pw2').value = '' }
+  };
+};
 VIEWS.logout = async () => { await sb.auth.signOut(); go('admin') };
 VIEWS.admin = async () => {
   if(!sb){ app.innerHTML = `<section class="panel narrow"><h2>Falta configurar</h2><p class="hint">Agrega la URL y la clave pública de Supabase en config.js.</p></section>`; return }
@@ -240,19 +259,29 @@ VIEWS.admin = async () => {
   const saved = ls('cronodisco-admin-email') || session?.user?.email || 'joacomunozv@gmail.com';
   app.innerHTML = `<section class="panel narrow"><p class="who">Administrador</p><h2>Ingresar</h2>
     ${session ? `<p class="err">La cuenta ${esc(session.user.email)} no es administradora.</p>` : ''}
-    <form id="fMail"><div class="opts" style="grid-template-columns:1fr">
-      <label>Correo<input id="lEmail" type="email" autocomplete="email" value="${esc(saved)}"></label></div>
-      <button class="pri" type="submit" style="width:100%">Enviarme un código</button></form>
+    <form id="fPass"><div class="opts" style="grid-template-columns:1fr">
+      <label>Correo<input id="lEmail" type="email" autocomplete="username" value="${esc(saved)}"></label>
+      <label>Contraseña<input id="lPass" type="password" autocomplete="current-password"></label></div>
+      <button class="pri" type="submit" style="width:100%">Ingresar</button></form>
+    <form id="fMail"><p class="hint">¿Aún no tienes contraseña? Te enviamos un enlace de ingreso al correo y luego la creas en "Cuenta".</p>
+      <button type="submit" style="width:100%">Enviarme un enlace</button></form>
     <form id="fCode" hidden><div class="opts" style="grid-template-columns:1fr">
       <label>Código del correo<input id="lCode" inputmode="numeric" autocomplete="one-time-code" maxlength="10" style="font-family:'Archivo Black';letter-spacing:.2em"></label></div>
-      <button class="pri" type="submit" style="width:100%">Ingresar</button></form>
+      <button class="pri" type="submit" style="width:100%">Ingresar con código</button></form>
     <p class="hint" id="lMsg"></p></section>`;
+  $('#fPass').onsubmit = async e => {
+    e.preventDefault(); const email = $('#lEmail').value.trim(); ls('cronodisco-admin-email', email);
+    $('#lMsg').textContent = 'Ingresando…';
+    const {error} = await sb.auth.signInWithPassword({email, password: $('#lPass').value});
+    if(error){ $('#lMsg').innerHTML = `<span class="err">${esc(/invalid/i.test(error.message) ? 'Correo o contraseña incorrectos. Si aún no creas tu contraseña, usa el enlace.' : error.message)}</span>`; return }
+    go('admin');
+  };
   $('#fMail').onsubmit = async e => {
     e.preventDefault(); const email = $('#lEmail').value.trim(); if(!email) return;
     $('#lMsg').textContent = 'Enviando código…'; ls('cronodisco-admin-email', email);
     const {error} = await sb.auth.signInWithOtp({email, options: {shouldCreateUser: true, emailRedirectTo: BASE + '#admin'}});
-    if(error){ $('#lMsg').innerHTML = `<span class="err">${esc(error.message)}</span>`; return }
-    $('#fMail').hidden = true; $('#fCode').hidden = false; $('#lCode').focus();
+    if(error){ $('#lMsg').innerHTML = `<span class="err">${esc(/rate limit/i.test(error.message) ? 'Se alcanzó el límite de correos de Supabase. Espera una hora o ingresa con contraseña.' : error.message)}</span>`; return }
+    $('#fMail').hidden = true; $('#fCode').hidden = false;
     $('#lMsg').textContent = `Te enviamos un correo a ${email}. Si trae un código, escríbelo aquí; si trae un enlace, ábrelo en este mismo navegador. Revisa también spam.`;
   };
   $('#fCode').onsubmit = async e => {
