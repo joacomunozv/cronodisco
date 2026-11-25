@@ -124,6 +124,8 @@ const $$ = s => [...document.querySelectorAll(s)];
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const app = $('#app'), au = $('#au');
 const cfg = window.CRONO_CONFIG || {};
+// Enlaces de ingreso antiguos volvían a ".../#admin" y Supabase agregaba "#access_token=..." detrás: se limpia antes de crear el cliente
+if(/^#admin[#&?]/.test(location.hash)) history.replaceState(null, '', location.pathname + location.search + '#' + location.hash.replace(/^#admin[#&?]/, ''));
 const sb = window.supabase && cfg.supabaseUrl && !/SUPABASE_/.test(cfg.supabaseUrl) ? window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey) : null;
 const BASE = location.origin + location.pathname;
 const KEY = 'cronodisco-game-v3', PKEY = 'cronodisco-player-v3';
@@ -256,9 +258,11 @@ VIEWS.admin = async () => {
   nav([['join','Soy jugador']]);
   app.innerHTML = `<section class="panel narrow"><p class="hint">Cargando…</p></section>`;
   if(await checkAdmin()){ const g = ls(KEY); return g && !g.winner ? go('play') : go('newgame') }
+  const hp = new URLSearchParams(location.hash.slice(1)), linkErr = hp.get('error_description');
   const saved = ls('cronodisco-admin-email') || session?.user?.email || 'joacomunozv@gmail.com';
   app.innerHTML = `<section class="panel narrow"><p class="who">Administrador</p><h2>Ingresar</h2>
     ${session ? `<p class="err">La cuenta ${esc(session.user.email)} no es administradora.</p>` : ''}
+    ${linkErr ? `<p class="err">El enlace no sirvió: ${esc(/expired|invalid/i.test(linkErr) ? 'ya se usó o expiró. Pide uno nuevo.' : linkErr)}</p>` : ''}
     <form id="fPass"><div class="opts" style="grid-template-columns:1fr">
       <label>Correo<input id="lEmail" type="email" autocomplete="username" value="${esc(saved)}"></label>
       <label>Contraseña<input id="lPass" type="password" autocomplete="current-password"></label></div>
@@ -279,7 +283,7 @@ VIEWS.admin = async () => {
   $('#fMail').onsubmit = async e => {
     e.preventDefault(); const email = $('#lEmail').value.trim(); if(!email) return;
     $('#lMsg').textContent = 'Enviando código…'; ls('cronodisco-admin-email', email);
-    const {error} = await sb.auth.signInWithOtp({email, options: {shouldCreateUser: true, emailRedirectTo: BASE + '#admin'}});
+    const {error} = await sb.auth.signInWithOtp({email, options: {shouldCreateUser: true, emailRedirectTo: BASE + '?admin=1'}});
     if(error){ $('#lMsg').innerHTML = `<span class="err">${esc(/rate limit/i.test(error.message) ? 'Se alcanzó el límite de correos de Supabase. Espera una hora o ingresa con contraseña.' : error.message)}</span>`; return }
     $('#fMail').hidden = true; $('#fCode').hidden = false;
     $('#lMsg').textContent = `Te enviamos un correo a ${email}. Si trae un código, escríbelo aquí; si trae un enlace, ábrelo en este mismo navegador. Revisa también spam.`;
@@ -611,11 +615,11 @@ function finishTurn(){
 }
 
 /* ===================== inicio ===================== */
-const authRedirect = /access_token|refresh_token|type=magiclink|error_description/.test(location.hash) || params.has('code');
+const authRedirect = /access_token|refresh_token|type=magiclink|error_description/.test(location.hash) || params.has('code') || params.has('admin');
 if(sb) sb.auth.onAuthStateChange((ev, s) => {
   session = s;
   if(ev === 'SIGNED_OUT') isAdmin = false;
-  if(ev === 'SIGNED_IN' && authRedirect){ history.replaceState(null, '', BASE + '#admin'); go('admin') }
+  if(ev === 'SIGNED_IN' && authRedirect){ history.replaceState(null, '', BASE + '#admin'); setTimeout(() => go('admin'), 0) }
 });
 go(authRedirect || location.hash === '#admin' || (!params.get('c') && ls(KEY)) ? 'admin' : 'join');
 }
