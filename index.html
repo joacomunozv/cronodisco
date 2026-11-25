@@ -82,7 +82,7 @@ h3{font-size:22px;margin-bottom:10px}
 .list li.turn{background:color-mix(in srgb,var(--acc) 14%,transparent);border-color:var(--acc)}
 .list small{color:var(--soft)}
 .pill{font-size:13px;font-weight:800;border-radius:999px;padding:3px 10px;background:var(--line);white-space:nowrap}
-.pill.lobby{background:#7d5cff;color:#fff}.pill.playing{background:var(--acc);color:#fff}.pill.finished{background:var(--ok);color:#fff}
+.pill.st-lobby{background:#7d5cff;color:#fff}.pill.st-playing{background:var(--acc);color:#fff}.pill.st-finished{background:var(--ok);color:#fff}
 .decks{display:grid;gap:8px;margin-top:10px}
 .decks label{display:flex;gap:12px;align-items:center;border:2px solid var(--line);border-radius:12px;padding:10px 14px;cursor:pointer}
 .decks input{width:22px;min-height:22px;flex:none;accent-color:var(--acc)}
@@ -184,7 +184,7 @@ const VIEWS = {};
 
 /* ===================== JUGADOR (celular) ===================== */
 VIEWS.join = () => {
-  nav([['admin','Administrador']]);
+  nav([['admin','Anfitrión']]);
   if(!sb){ app.innerHTML = `<section class="panel narrow"><h2>Falta configurar</h2><p class="hint">La app aún no está conectada a la base de datos.</p></section>`; return }
   const saved = ls(PKEY), code = (params.get('c') || saved?.code || '').toUpperCase();
   if(saved && saved.code === code && saved.player_id) return VIEWS.waiting();
@@ -206,7 +206,7 @@ VIEWS.join = () => {
 };
 VIEWS.waiting = () => {
   const me = ls(PKEY); if(!me) return VIEWS.join();
-  nav([['admin','Administrador']]);
+  nav([['admin','Anfitrión']]);
   const paint = st => {
     if(!st){ app.innerHTML = `<section class="panel narrow"><h2>La partida ya no existe</h2><div class="row"><button class="pri" type="button" id="bOut">Unirme a otra</button></div></section>`; $('#bOut').onclick = () => { ls(PKEY,null); history.replaceState(null,'',BASE); go('join') }; return }
     const inList = st.players.some(p => p.name.toLowerCase() === me.name.toLowerCase());
@@ -226,15 +226,41 @@ VIEWS.waiting = () => {
 };
 
 /* ===================== ADMIN ===================== */
-let session = null, isAdmin = false;
+let session = null, isAdmin = false, isHost = false, profile = null;
 async function checkAdmin(){
   const {data} = await sb.auth.getSession(); session = data.session;
-  if(!session){ isAdmin = false; return false }
-  const {data: ok} = await sb.rpc('is_admin'); isAdmin = !!ok; return isAdmin;
+  if(!session){ isAdmin = isHost = false; profile = null; return false }
+  const [a, h, p] = await Promise.all([sb.rpc('is_admin'), sb.rpc('is_host'), sb.from('profiles').select('*').eq('user_id', session.user.id).maybeSingle()]);
+  isAdmin = !!a.data; isHost = !!h.data; profile = p.data || null; return isHost;
 }
-function adminNav(cur){ nav([['newgame','Nueva partida',cur==='newgame'],['games','Partidas',cur==='games'],['decks','Mazos',cur==='decks'],['account','Cuenta',cur==='account'],['logout','Salir']]) }
-VIEWS.account = () => {
+function adminNav(cur){
+  const items = [['newgame','Nueva partida',cur==='newgame'],['games','Partidas',cur==='games']];
+  if(isAdmin) items.push(['decks','Mazos',cur==='decks'],['users', pendingCount ? `Usuarios (${pendingCount})` : 'Usuarios', cur==='users']);
+  items.push(['account','Cuenta',cur==='account'],['logout','Salir']);
+  nav(items);
+}
+let pendingCount = 0;
+async function refreshPending(){ if(!isAdmin) return; const {count} = await sb.from('profiles').select('user_id', {count: 'exact', head: true}).eq('status', 'pending'); pendingCount = count || 0 }
+VIEWS.users = async () => {
   if(!isAdmin) return go('admin');
+  await refreshPending(); adminNav('users');
+  const {data, error} = await sb.from('profiles').select('*').order('created_at', {ascending: false});
+  if(error){ app.innerHTML = `<section class="panel"><p class="err">${esc(error.message)}</p></section>`; return }
+  const me = session.user.id, lbl = {pending:'Pendiente', approved:'Aprobado', rejected:'Rechazado'};
+  const row = u => `<tr><td><b>${esc(u.name || '—')}</b><br><small class="who">${esc(u.email)}</small></td><td><span class="pill ${u.status==='approved'?'st-finished':u.status==='pending'?'st-lobby':''}">${lbl[u.status]}</span></td><td>${fmtDate(u.created_at)}</td>
+    <td style="text-align:right">${u.user_id===me ? '<small class="who">Tú (administrador)</small>' : `
+      ${u.status!=='approved' ? `<button type="button" class="pri" data-ok="${esc(u.user_id)}">Aprobar</button>` : `<button type="button" data-no="${esc(u.user_id)}">Quitar acceso</button>`}
+      ${u.status==='pending' ? `<button type="button" data-no="${esc(u.user_id)}">Rechazar</button>` : ''}
+      <button type="button" class="ghost danger" data-del="${esc(u.user_id)}" data-name="${esc(u.name || u.email)}">Eliminar</button>`}</td></tr>`;
+  const groups = [['pending','Solicitudes pendientes'],['approved','Anfitriones aprobados'],['rejected','Rechazados']];
+  app.innerHTML = groups.map(([k,t]) => { const list = data.filter(u => u.status===k); return `<section class="panel"><h3>${t} (${list.length})</h3>${list.length ? `<table class="stack"><thead><tr><th>Usuario</th><th>Estado</th><th>Registro</th><th></th></tr></thead><tbody>${list.map(row).join('')}</tbody></table>` : '<p class="hint">Nadie por ahora.</p>'}</section>` }).join('') + '<p class="hint" id="uMsg"></p>';
+  const setStatus = async (id, status) => { const {error} = await sb.from('profiles').update({status, decided_at: new Date().toISOString()}).eq('user_id', id); if(error) $('#uMsg').innerHTML = `<span class="err">${esc(error.message)}</span>`; else go('users') };
+  $$('[data-ok]').forEach(b => b.onclick = () => setStatus(b.dataset.ok, 'approved'));
+  $$('[data-no]').forEach(b => b.onclick = () => setStatus(b.dataset.no, 'rejected'));
+  $$('[data-del]').forEach(b => b.onclick = () => confirmBox(`¿Eliminar a ${b.dataset.name}?`, 'Se borra su usuario y no podrá ingresar. Sus partidas quedan en el historial. Podrá registrarse de nuevo.', 'Eliminar', async () => { const {error} = await sb.rpc('admin_delete_user', {p_user_id: b.dataset.del}); if(error) $('#uMsg').innerHTML = `<span class="err">${esc(error.message)}</span>`; else go('users') }));
+};
+VIEWS.account = () => {
+  if(!isHost) return go('admin');
   adminNav('account');
   app.innerHTML = `<section class="panel narrow"><p class="who">${esc(session?.user?.email || '')}</p><h2>Contraseña</h2>
     <p class="hint">Crea o cambia tu contraseña para ingresar desde cualquier equipo sin esperar correos. Mínimo 8 caracteres.</p>
@@ -257,22 +283,60 @@ VIEWS.admin = async () => {
   if(!sb){ app.innerHTML = `<section class="panel narrow"><h2>Falta configurar</h2><p class="hint">Agrega la URL y la clave pública de Supabase en config.js.</p></section>`; return }
   nav([['join','Soy jugador']]);
   app.innerHTML = `<section class="panel narrow"><p class="hint">Cargando…</p></section>`;
-  if(await checkAdmin()){ const g = ls(KEY); return g && !g.winner ? go('play') : go('newgame') }
+  if(await checkAdmin()){ await refreshPending(); const g = ls(KEY); return g && !g.winner ? go('play') : go(isAdmin && pendingCount ? 'users' : 'newgame') }
+  if(session && profile && profile.status !== 'approved'){
+    nav([['logout','Salir']]);
+    app.innerHTML = `<section class="panel narrow"><p class="who">${esc(profile.name || profile.email)}</p>
+      <h2>${profile.status==='pending' ? 'Solicitud enviada' : 'Solicitud rechazada'}</h2>
+      <p class="hint">${profile.status==='pending' ? 'Tu usuario quedó pendiente. Cuando el administrador lo apruebe podrás crear partidas.' : 'El administrador no aprobó este usuario. Si crees que es un error, contáctalo.'}</p>
+      ${profile.status==='pending' ? '<div class="row"><button type="button" class="pri" id="bRetry">Revisar de nuevo</button></div>' : ''}</section>`;
+    if($('#bRetry')) $('#bRetry').onclick = () => go('admin');
+    return;
+  }
   const hp = new URLSearchParams(location.hash.slice(1)), linkErr = hp.get('error_description');
   const saved = ls('cronodisco-admin-email') || session?.user?.email || 'joacomunozv@gmail.com';
-  app.innerHTML = `<section class="panel narrow"><p class="who">Administrador</p><h2>Ingresar</h2>
-    ${session ? `<p class="err">La cuenta ${esc(session.user.email)} no es administradora.</p>` : ''}
+  const signup = params.get('registro') === '1' || location.hash === '#registro';
+  app.innerHTML = `<section class="panel narrow"><p class="who">Anfitriones</p><h2>${signup ? 'Crear usuario' : 'Ingresar'}</h2>
+    ${session ? `<p class="err">La cuenta ${esc(session.user.email)} no tiene acceso.</p>` : ''}
     ${linkErr ? `<p class="err">El enlace no sirvió: ${esc(/expired|invalid/i.test(linkErr) ? 'ya se usó o expiró. Pide uno nuevo.' : linkErr)}</p>` : ''}
-    <form id="fPass"><div class="opts" style="grid-template-columns:1fr">
+    ${signup ? `<form id="fSign"><div class="opts" style="grid-template-columns:1fr">
+      <label>Nombre<input id="sName" maxlength="40" autocomplete="name"></label>
+      <label>Correo<input id="sEmail" type="email" autocomplete="username"></label>
+      <label>Contraseña<input id="sPass" type="password" autocomplete="new-password" minlength="8"></label>
+      <label>Repite la contraseña<input id="sPass2" type="password" autocomplete="new-password" minlength="8"></label></div>
+      <button class="pri" type="submit" style="width:100%">Crear usuario</button></form>
+      <p class="hint">El administrador debe aprobar tu usuario antes de que puedas crear partidas.</p>
+      <div class="row"><button type="button" class="ghost" id="bToLogin">Ya tengo usuario: ingresar</button></div>`
+    : `<form id="fPass"><div class="opts" style="grid-template-columns:1fr">
       <label>Correo<input id="lEmail" type="email" autocomplete="username" value="${esc(saved)}"></label>
       <label>Contraseña<input id="lPass" type="password" autocomplete="current-password"></label></div>
       <button class="pri" type="submit" style="width:100%">Ingresar</button></form>
-    <form id="fMail"><p class="hint">¿Aún no tienes contraseña? Te enviamos un enlace de ingreso al correo y luego la creas en "Cuenta".</p>
-      <button type="submit" style="width:100%">Enviarme un enlace</button></form>
-    <form id="fCode" hidden><div class="opts" style="grid-template-columns:1fr">
+      <div class="row"><button type="button" id="bToSign">Crear usuario</button></div>
+      <form id="fMail"><p class="hint">¿Sin contraseña? Te enviamos un enlace de ingreso al correo y luego la creas en "Cuenta".</p>
+      <button type="submit" class="ghost" style="width:100%">Enviarme un enlace</button></form>
+      <form id="fCode" hidden><div class="opts" style="grid-template-columns:1fr">
       <label>Código del correo<input id="lCode" inputmode="numeric" autocomplete="one-time-code" maxlength="10" style="font-family:'Archivo Black';letter-spacing:.2em"></label></div>
-      <button class="pri" type="submit" style="width:100%">Ingresar con código</button></form>
+      <button class="pri" type="submit" style="width:100%">Ingresar con código</button></form>`}
     <p class="hint" id="lMsg"></p></section>`;
+  const swap = to => { history.replaceState(null, '', BASE + (to ? '#registro' : '#admin')); go('admin') };
+  if(signup){
+    $('#bToLogin').onclick = () => swap(false);
+    $('#fSign').onsubmit = async e => {
+      e.preventDefault();
+      const name = $('#sName').value.trim(), email = $('#sEmail').value.trim(), a = $('#sPass').value, b = $('#sPass2').value;
+      if(!name || !email){ $('#lMsg').innerHTML = '<span class="err">Completa nombre y correo.</span>'; return }
+      if(a.length < 8){ $('#lMsg').innerHTML = '<span class="err">La contraseña debe tener al menos 8 caracteres.</span>'; return }
+      if(a !== b){ $('#lMsg').innerHTML = '<span class="err">Las contraseñas no coinciden.</span>'; return }
+      $('#lMsg').textContent = 'Creando usuario…';
+      const {data, error} = await sb.auth.signUp({email, password: a, options: {data: {name}}});
+      if(error){ $('#lMsg').innerHTML = `<span class="err">${esc(/registered|exists/i.test(error.message) ? 'Ese correo ya tiene usuario. Ingresa con tu contraseña.' : error.message)}</span>`; return }
+      ls('cronodisco-admin-email', email);
+      if(!data.session){ $('#lMsg').textContent = 'Usuario creado. Ingresa con tu correo y contraseña.'; return }
+      history.replaceState(null, '', BASE + '#admin'); go('admin');
+    };
+    return;
+  }
+  $('#bToSign').onclick = () => swap(true);
   $('#fPass').onsubmit = async e => {
     e.preventDefault(); const email = $('#lEmail').value.trim(); ls('cronodisco-admin-email', email);
     $('#lMsg').textContent = 'Ingresando…';
@@ -303,7 +367,7 @@ async function loadDecks(){
   return data.map(d => ({...d, n: d.songs?.[0]?.count || 0}));
 }
 VIEWS.newgame = async () => {
-  if(!isAdmin) return go('admin');
+  if(!isHost) return go('admin');
   adminNav('newgame');
   app.innerHTML = `<section class="panel narrow"><p class="hint">Cargando mazos…</p></section>`;
   let decks; try{ decks = (await loadDecks()).filter(d => d.active && d.n) }catch(e){ app.innerHTML = `<section class="panel narrow"><p class="err">${esc(e.message)}</p></section>`; return }
@@ -326,7 +390,7 @@ VIEWS.newgame = async () => {
     const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     for(let k=0;k<5;k++){
       const code = Array.from({length:4}, () => A[Math.floor(Math.random()*A.length)]).join('');
-      const {data, error} = await sb.from('games').insert({code, deck_ids: ids, deck_names: names, win_cards: win, start_tokens: tok}).select().single();
+      const {data, error} = await sb.from('games').insert({code, deck_ids: ids, deck_names: names, win_cards: win, start_tokens: tok, host_name: profile?.name || session?.user?.email || ''}).select().single();
       if(!error) return go('lobby', data.id);
       if(!/duplicate|unique/i.test(error.message)){ $('#nMsg').innerHTML = `<span class="err">${esc(error.message)}</span>`; return }
     }
@@ -335,7 +399,7 @@ VIEWS.newgame = async () => {
 
 /* --- Sala de espera --- */
 VIEWS.lobby = async gid => {
-  if(!isAdmin) return go('admin');
+  if(!isHost) return go('admin');
   adminNav('games');
   const {data: g, error} = await sb.from('games').select('*').eq('id', gid).single();
   if(error){ app.innerHTML = `<section class="panel narrow"><p class="err">${esc(error.message)}</p></section>`; return }
@@ -369,18 +433,18 @@ VIEWS.lobby = async gid => {
 
 /* --- Historial --- */
 VIEWS.games = async () => {
-  if(!isAdmin) return go('admin');
+  if(!isHost) return go('admin');
   adminNav('games');
-  const {data, error} = await sb.from('games').select('id,code,deck_names,status,winner,created_at,win_cards,players(name,cards)').order('created_at', {ascending: false}).limit(40);
+  const {data, error} = await sb.from('games').select('id,code,deck_names,status,winner,created_at,win_cards,host_name,players(name,cards)').order('created_at', {ascending: false}).limit(40);
   if(error){ app.innerHTML = `<section class="panel"><p class="err">${esc(error.message)}</p></section>`; return }
   const lbl = {lobby:'En sala', playing:'Jugando', finished:'Terminada', cancelled:'Cancelada'};
   const cur = ls(KEY);
   app.innerHTML = `<section class="panel"><p class="who">Historial</p><h2>Partidas</h2>
     ${cur && !cur.winner ? `<div class="row"><button class="pri" type="button" id="bResume">Volver a la partida en curso (${esc(cur.code)})</button></div>` : ''}
-    <table class="stack"><thead><tr><th>Código</th><th>Fecha</th><th>Mazo</th><th>Estado</th><th>Jugadores</th><th>Ganador</th><th></th></tr></thead><tbody>
-    ${data.map(g => `<tr><td><b>${esc(g.code)}</b></td><td>${fmtDate(g.created_at)}</td><td>${esc(g.deck_names)}</td><td><span class="pill ${esc(g.status)}">${lbl[g.status]||esc(g.status)}</span></td>
+    <table class="stack"><thead><tr><th>Código</th><th>Fecha</th>${isAdmin ? '<th>Anfitrión</th>' : ''}<th>Mazo</th><th>Estado</th><th>Jugadores</th><th>Ganador</th><th></th></tr></thead><tbody>
+    ${data.map(g => `<tr><td><b>${esc(g.code)}</b></td><td>${fmtDate(g.created_at)}</td>${isAdmin ? `<td>${esc(g.host_name||'')}</td>` : ''}<td>${esc(g.deck_names)}</td><td><span class="pill st-${esc(g.status)}">${lbl[g.status]||esc(g.status)}</span></td>
       <td>${g.players.map(p => esc(p.name) + (g.status==='lobby' ? '' : ` (${p.cards})`)).join(', ') || '<small class="who">nadie aún</small>'}</td><td>${esc(g.winner||'')}</td>
-      <td>${g.status==='lobby' ? `<button type="button" data-open="${esc(g.id)}">Abrir sala</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="7" class="who">Aún no hay partidas.</td></tr>'}
+      <td>${g.status==='lobby' ? `<button type="button" data-open="${esc(g.id)}">Abrir sala</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="8" class="who">Aún no hay partidas.</td></tr>'}
     </tbody></table></section>`;
   $$('[data-open]').forEach(b => b.onclick = () => go('lobby', b.dataset.open));
   if($('#bResume')) $('#bResume').onclick = () => go('play');
@@ -522,7 +586,7 @@ function paintPlayer(){
 }
 VIEWS.play = () => {
   S = ls(KEY); DECK = ls(KEY + '-deck') || [];
-  if(!S || !DECK.length) return go(isAdmin ? 'newgame' : 'admin');
+  if(!S || !DECK.length) return go(isHost ? 'newgame' : 'admin');
   nav([['undo','Deshacer'],['endgame','Terminar'],['games','Partidas']]);
   render(); if(S.phase==='listen' && S.winner==null) prefetch(S.card);
 };
@@ -618,10 +682,11 @@ function finishTurn(){
 const authRedirect = /access_token|refresh_token|type=magiclink|error_description/.test(location.hash) || params.has('code') || params.has('admin');
 if(sb) sb.auth.onAuthStateChange((ev, s) => {
   session = s;
-  if(ev === 'SIGNED_OUT') isAdmin = false;
+  if(ev === 'SIGNED_OUT'){ isAdmin = isHost = false; profile = null }
   if(ev === 'SIGNED_IN' && authRedirect){ history.replaceState(null, '', BASE + '#admin'); setTimeout(() => go('admin'), 0) }
 });
-go(authRedirect || location.hash === '#admin' || (!params.get('c') && ls(KEY)) ? 'admin' : 'join');
+window.addEventListener('hashchange', () => { if(location.hash === '#admin' || location.hash === '#registro') go('admin') });
+go(authRedirect || location.hash === '#admin' || location.hash === '#registro' || (!params.get('c') && ls(KEY)) ? 'admin' : 'join');
 }
 </script>
 </body>
