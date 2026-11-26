@@ -55,3 +55,21 @@ end $$;
 
 -- Música en los celulares (juego a distancia)
 alter table public.games add column if not exists remote_audio boolean not null default false;
+
+-- v3: acciones con número correlativo (evita duplicados entre tiempo real y respaldo)
+alter table public.game_actions add column if not exists n bigint;
+drop function if exists public.send_action(uuid, text, int, int);
+create or replace function public.send_action(p_player_id uuid, p_kind text, p_slot int default null, p_seq int default null, p_n bigint default null) returns void
+language plpgsql security definer set search_path = public as $$
+declare g games; c int;
+begin
+  select g2.* into g from players p join games g2 on g2.id = p.game_id where p.id = p_player_id;
+  if not found then raise exception 'Jugador no encontrado'; end if;
+  if g.status <> 'playing' then raise exception 'La partida no está en curso'; end if;
+  if p_kind not in ('place','skip','buy','challenge','reveal','next') then raise exception 'Acción no válida'; end if;
+  select count(*) into c from game_actions where game_id = g.id;
+  if c > 60 then raise exception 'Demasiadas acciones pendientes'; end if;
+  insert into game_actions (game_id, player_id, kind, slot, seq, n) values (g.id, p_player_id, p_kind, p_slot, p_seq, p_n);
+end $$;
+revoke all on function public.send_action(uuid, text, int, int, bigint) from public;
+grant execute on function public.send_action(uuid, text, int, int, bigint) to anon, authenticated;

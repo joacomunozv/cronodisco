@@ -204,8 +204,13 @@ function ls(k, v){ try{ if(v===undefined) return JSON.parse(localStorage.getItem
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]] } return a }
 const fmtDate = d => d ? new Date(d).toLocaleString('es-CL', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}) : '';
 let timers = [];
-function clearTimers(){ timers.forEach(t => clearInterval(t)); timers = []; channels.forEach(c => sb && sb.removeChannel(c)); channels = [] }
-let channels = [];
+function clearTimers(){ timers.forEach(t => clearInterval(t)); timers = []; channels.forEach(c => sb && sb.removeChannel(c)); channels = []; liveCh = null }
+let channels = [], liveCh = null;
+const hexb = b => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2,'0')).join('');
+const sha = async t => hexb(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)));
+const actMsg = a => [a.kind, a.slot ?? '', a.seq ?? '', a.n].join('|');
+const pidOf = async id => (await sha('pid|' + id)).slice(0, 16);
+const liveChannel = code => sb.channel('cd-' + String(code).toUpperCase(), {config: {broadcast: {self: false}}});
 function overlay(html){ $('#ov').innerHTML = `<div class="overlay"><div class="panel">${html}</div></div>` }
 function closeOv(){ $('#ov').innerHTML = '' }
 function confirmBox(title, text, okLabel, onOk){
@@ -302,7 +307,12 @@ VIEWS.join = () => {
     VIEWS.waiting();
   };
 };
-let phCh = false, lastPaint = '', phAudio = {on: false, url: ''};
+let phCh = false, lastPaint = '', phAudio = {on: false, url: ''}, pend = null, phNow = null, lastNn = 0;
+const nextN = () => (lastNn = Math.max(Date.now(), lastNn + 1));
+/* No redibujar mientras el dedo está sobre la pantalla: así no se pierden toques */
+let touching = false, deferred = null;
+addEventListener('pointerdown', () => { touching = true }, true);
+['pointerup', 'pointercancel'].forEach(ev => addEventListener(ev, () => { touching = false; if(deferred){ const f = deferred; deferred = null; setTimeout(f, 90) } }, true));
 const vOk = (tl, k, y) => (k===0 || y >= tl[k-1][0]) && (k===tl.length || y <= tl[k][0]);
 function vTimeline(v, pi, mode){
   const p = v.players[pi], tl = p.tl; let h = '';
@@ -317,8 +327,16 @@ function vTimeline(v, pi, mode){
   return `<div class="tl">${h}</div>`;
 }
 function paintGame(st, me){
-  const v = st.view, myi = v.players.findIndex(p => p.name.toLowerCase() === me.name.toLowerCase());
+  let v = st.view; const myi = v.players.findIndex(p => p.name.toLowerCase() === me.name.toLowerCase());
   if(myi < 0){ app.innerHTML = `<section class="panel narrow"><h2>No estás en esta partida</h2><div class="row"><button type="button" id="bOut">Unirme a otra</button></div></section>`; $('#bOut').onclick = () => { ls(PKEY,null); history.replaceState(null,'',BASE); go('join') }; return }
+  if(pend){
+    const done = Date.now() - pend.at > 5000 || v.seq !== pend.seq
+      || (pend.kind === 'place' && v.slot === pend.slot) || (pend.kind === 'challenge' && (v.ch||[]).some(c => c.p === myi))
+      || (pend.kind === 'reveal' && v.phase !== 'listen') || (pend.kind === 'next' && v.phase !== 'reveal');
+    if(done) pend = null;
+  }
+  if(pend){ v = {...v}; if(pend.kind === 'place') v.slot = pend.slot; if(pend.kind === 'challenge') v.ch = [...(v.ch||[]), {p: myi, slot: pend.slot}] }
+  const busy = !!pend && pend.kind !== 'place', dis = busy ? 'disabled' : '';
   const mine = myi === v.turn, tp = v.players[v.turn], iam = v.players[myi], listen = v.phase==='listen', reveal = v.phase==='reveal';
   const free = tp.tl.length + 1 - (v.ch||[]).length - (v.slot==null?0:1);
   const canCh = !mine && listen && v.slot!=null && iam.tokens>0 && !(v.ch||[]).some(c => c.p===myi) && free>0;
@@ -326,22 +344,22 @@ function paintGame(st, me){
   let top, tlMode = 'view', ctl = '';
   if(mine && listen){
     top = `<div class="turnbox">Tu turno · escucha la canción en el iPad</div><p class="who" style="margin:12px 0 4px">${v.slot==null?'Toca dónde va en tu línea de tiempo':'Posición elegida. Puedes cambiarla o revelar.'}</p>`;
-    tlMode = (v.ch||[]).length ? 'view' : 'place';
+    tlMode = (v.ch||[]).length || busy ? 'view' : 'place';
     ctl = `<div class="row">
-      <button type="button" id="aSkip" ${iam.tokens<1||(v.ch||[]).length?'disabled':''}>Saltar (−1 ficha)</button>
-      <button type="button" id="aBuy" ${iam.tokens<3||v.slot!=null||(v.ch||[]).length?'disabled':''}>Comprar carta (3 fichas)</button>
-      <button type="button" class="pri" id="aRev" ${v.slot==null?'disabled':''}>Revelar</button></div>
+      <button type="button" id="aSkip" ${iam.tokens<1||(v.ch||[]).length||busy?'disabled':''}>Saltar (−1 ficha)</button>
+      <button type="button" id="aBuy" ${iam.tokens<3||v.slot!=null||(v.ch||[]).length||busy?'disabled':''}>Comprar carta (3 fichas)</button>
+      <button type="button" class="pri" id="aRev" ${v.slot==null||busy?'disabled':''}>${pend?.kind==='reveal'?'Revelando…':'Revelar'}</button></div>
       ${(v.ch||[]).length?'<p class="hint">Hay desafíos: la posición ya no se puede cambiar.</p>':''}`;
   } else if(reveal){
     const c = v.card;
     top = `<p class="who">Turno de ${esc(tp.name)} · resultado</p>${revArt(c.cover)}<div><span class="big">${c.year}</span></div><p style="margin:8px 0 0;font-weight:800">${esc(c.title)}</p><p style="margin:0" class="who">${esc(c.artist)}</p>
       <span class="verdict ${v.res?.ok?'ok':'bad'}">${esc(v.res?.msg||'')}</span>`;
-    ctl = mine ? `<div class="row"><button type="button" class="pri" id="aNext">Siguiente turno</button></div>` : `<p class="hint">Espera a que ${esc(tp.name)} pase al siguiente turno.</p>`;
+    ctl = mine ? `<div class="row"><button type="button" class="pri" id="aNext" ${dis}>${pend?.kind==='next'?'Pasando…':'Siguiente turno'}</button></div>` : `<p class="hint">Espera a que ${esc(tp.name)} pase al siguiente turno.</p>`;
     if(mine) ctl += `<p class="hint">Si nombraste artista y título, díselo al anfitrión para ganar una ficha.</p>`;
   } else {
     top = `<p class="who">Turno de ${esc(tp.name)}</p><h2 style="margin:4px 0 8px">${v.slot==null?'Está eligiendo la posición…':'Eligió una posición'}</h2>`;
-    tlMode = phCh ? 'challenge' : 'view';
-    ctl = canCh ? `<div class="row"><button type="button" class="${phCh?'pri':''}" id="aCh">${phCh?'Toca una posición libre ⚔ (cancelar)':'Desafiar (−1 ficha)'}</button></div>` : (listen && v.slot!=null && iam.tokens<1 ? '<p class="hint">No tienes fichas para desafiar.</p>' : '');
+    tlMode = phCh && !busy ? 'challenge' : 'view';
+    ctl = pend?.kind === 'challenge' ? '<p class="hint">Desafío enviado…</p>' : canCh ? `<div class="row"><button type="button" class="${phCh?'pri':''}" id="aCh" ${dis}>${phCh?'Toca una posición libre ⚔ (cancelar)':'Desafiar (−1 ficha)'}</button></div>` : (listen && v.slot!=null && iam.tokens<1 ? '<p class="hint">No tienes fichas para desafiar.</p>' : '');
   }
   const audioBox = v.remote && listen ? `<div class="row" style="margin:0 0 12px"><button type="button" class="${phAudio.on?'':'pri'}" id="aSound" ${v.audio?'':'disabled'}>${!v.audio ? 'Cargando canción…' : phAudio.on ? '▶ Escuchar / pausar' : '🔊 Activar sonido'}</button></div>` : '';
   const mineTl = !mine ? `<p class="who" style="margin-top:18px">Tu línea de tiempo</p>${vTimeline({...v, slot:null, ch:[], phase:'x'}, myi, 'view')}` : '';
@@ -350,9 +368,16 @@ function paintGame(st, me){
     ${audioBox}${top}${vTimeline(v, v.turn, tlMode)}${ctl}${mineTl}
     <ul class="list" style="margin-top:18px">${v.players.map((p,i) => `<li class="${i===myi?'me':''} ${i===v.turn?'turn':''}"><span>${av(p.name)}<b>${esc(p.name)}</b></span><span><b>${p.tl.length}/${v.win}</b> <span class="dots">${'●'.repeat(p.tokens)}</span></span></li>`).join('')}</ul></section>`;
   const act = async (kind, slot) => {
-    const {error} = await sb.rpc('send_action', {p_player_id: me.player_id, p_kind: kind, p_slot: slot ?? null, p_seq: v.seq});
-    if(error){ const m = document.createElement('p'); m.className = 'err'; m.textContent = error.message; app.firstElementChild.appendChild(m); return }
-    lastPaint = ''; setTimeout(() => { if(window.__phPoll) window.__phPoll() }, 600); setTimeout(() => { if(window.__phPoll) window.__phPoll() }, 1500);
+    if(busy) return;
+    const a = {kind, slot: slot ?? null, seq: st.view.seq, n: nextN()};
+    pend = {kind, slot: a.slot, seq: a.seq, at: Date.now()};
+    lastPaint = ''; paintGame(st, me);                       // respuesta inmediata en pantalla
+    setTimeout(() => { if(phNow) phNow() }, 5100);          // si no llega confirmación, vuelve al estado real
+    try{
+      if(liveCh){ const [pid, sig] = await Promise.all([pidOf(me.player_id), sha(me.player_id + '|' + actMsg(a))]); liveCh.send({type: 'broadcast', event: 'act', payload: {...a, pid, sig}}).catch(() => {}) }
+    }catch(e){}
+    const {error} = await sb.rpc('send_action', {p_player_id: me.player_id, p_kind: kind, p_slot: a.slot, p_seq: a.seq, p_n: a.n});  // respaldo por base de datos
+    if(error){ pend = null; lastPaint = ''; if(phNow) phNow(); const m = document.createElement('p'); m.className = 'err'; m.textContent = error.message; app.firstElementChild?.appendChild(m) }
   };
   $$('[data-pslot]').forEach(b => b.onclick = () => {
     const k = +b.dataset.pslot;
@@ -372,9 +397,11 @@ function paintGame(st, me){
 }
 VIEWS.waiting = () => {
   const me = ls(PKEY); if(!me) return VIEWS.join();
-  nav([['admin','Anfitrión']]); lastPaint = ''; phCh = false;
+  nav([['admin','Anfitrión']]); lastPaint = ''; phCh = false; pend = null;
+  let cur, lastT = 0;
   const paint = st => {
-    const key = JSON.stringify(st) + phCh; if(key === lastPaint) return; lastPaint = key;
+    if(touching){ deferred = () => paint(cur === undefined ? st : cur); return }
+    const key = JSON.stringify(st) + phCh + JSON.stringify(pend); if(key === lastPaint) return; lastPaint = key;
     if(!st){ app.innerHTML = `<section class="panel narrow"><h2>La partida ya no existe</h2><div class="row"><button class="pri" type="button" id="bOut">Unirme a otra</button></div></section>`; $('#bOut').onclick = () => { ls(PKEY,null); history.replaceState(null,'',BASE); go('join') }; return }
     if(st.status==='playing' && st.view && st.view.players) return paintGame(st, me);
     const inList = st.players.some(p => p.name.toLowerCase() === me.name.toLowerCase());
@@ -388,8 +415,22 @@ VIEWS.waiting = () => {
     if($('#bLeave')) $('#bLeave').onclick = async () => { await sb.rpc('leave_game', {p_player_id: me.player_id}); ls(PKEY,null); go('join') };
     if($('#bOut')) $('#bOut').onclick = () => { ls(PKEY,null); history.replaceState(null,'',BASE); go('join') };
   };
-  const poll = async () => { const {data} = await sb.rpc('game_state', {p_code: me.code}); paint(data) };
-  window.__phPoll = poll; poll(); timers.push(setInterval(poll, 1500));
+  const take = st => {
+    const t = st?.view?.t || 0;
+    if(st && st.status === 'playing' && t && t < lastT) return;   // estado viejo: se ignora
+    if(t > lastT) lastT = t;
+    cur = st; paint(st);
+  };
+  phNow = () => { lastPaint = ''; if(cur !== undefined) paint(cur) };
+  const poll = async () => { const {data, error} = await sb.rpc('game_state', {p_code: me.code}); if(!error) take(data) };
+  const ch = liveChannel(me.code);
+  ch.on('broadcast', {event: 'view'}, ({payload: m}) => {
+    if(!m?.view?.players) return;
+    take({...(cur || {code: me.code, deck_names: '', win_cards: m.view.win}), status: m.status, winner: m.winner, turn_name: m.turn_name, view: m.view,
+      players: m.view.players.map(p => ({name: p.name, cards: p.tl.length, tokens: p.tokens}))});
+  }).subscribe(s => { if(s === 'SUBSCRIBED') ch.send({type: 'broadcast', event: 'hello', payload: {}}).catch(() => {}) });
+  liveCh = ch; channels.push(ch);
+  poll(); timers.push(setInterval(poll, 2500));
 };
 
 /* ===================== ADMIN ===================== */
@@ -719,20 +760,47 @@ async function startGame(g, players){
 let lastPl = {};
 function buildView(){
   const rev = S.phase==='reveal' || S.winner!=null, c = DECK[S.card];
-  return {seq: S.seq||0, phase: S.winner!=null ? 'end' : S.phase, turn: S.turn, slot: S.slot, ch: S.ch, win: S.win, deckLeft: S.deck.length,
+  return {t: Date.now(), seq: S.seq||0, phase: S.winner!=null ? 'end' : S.phase, turn: S.turn, slot: S.slot, ch: S.ch, win: S.win, deckLeft: S.deck.length,
     card: rev && c ? {year: c[2], artist: c[0], title: c[1], cover: COV[c[3]] || ''} : null, remote: !!S.remote, audio: S.remote && S.phase==='listen' && S.winner==null && prev.card===S.card && prev.url ? prev.url : null, res: rev ? S.res : null, named: S.named,
     players: S.players.map(p => ({name: p.name, tokens: p.tokens, tl: p.tl.map(k => [DECK[k][2], DECK[k][0], DECK[k][1], COV[DECK[k][3]] || ''])}))};
 }
+let bcT = null, syncChain = Promise.resolve();
+function bcast(){
+  clearTimeout(bcT);
+  bcT = setTimeout(() => {
+    if(!liveCh || !S) return;
+    const fin = S.winner != null;
+    liveCh.send({type: 'broadcast', event: 'view', payload: {view: buildView(), status: fin ? 'finished' : 'playing', winner: fin ? S.players[S.winner].name : null, turn_name: fin ? null : S.players[S.turn].name}}).catch(() => {});
+  }, 30);
+}
+async function startLive(){
+  const s = S; if(!sb || !s?.gameId) return;
+  const PID = {};
+  for(const p of s.players) PID[await pidOf(p.id)] = p.id;
+  if(S !== s) return;
+  const ch = liveChannel(s.code);
+  ch.on('broadcast', {event: 'act'}, async ({payload: a}) => {
+    const id = a && PID[a.pid]; if(!id || S !== s) return;
+    if(await sha(id + '|' + actMsg(a)) !== a.sig) return;
+    try{ applyAction({...a, player_id: id}) }catch(e){ console.error(e) }
+  }).on('broadcast', {event: 'hello'}, () => bcast())
+    .subscribe(st => { if(st === 'SUBSCRIBED') bcast() });
+  liveCh = ch; channels.push(ch);
+}
 function sync(){
   if(!sb || !S?.gameId) return;
+  bcast();
   clearTimeout(syncT);
-  syncT = setTimeout(async () => {
+  syncT = setTimeout(() => { syncChain = syncChain.then(syncDb).catch(() => {}) }, 250);
+}
+async function syncDb(){
+  {
     const s = S; if(!s) return;
     await Promise.all(s.players.filter(p => lastPl[p.id] !== p.tl.length + '/' + p.tokens).map(async p => { const {error} = await sb.from('players').update({cards: p.tl.length, tokens: p.tokens}).eq('id', p.id); if(!error) lastPl[p.id] = p.tl.length + '/' + p.tokens }));
     const view = buildView();
     const upd = s.winner != null ? {status: 'finished', winner: s.players[s.winner].name, turn_name: null, finished_at: new Date().toISOString(), view} : {turn_name: s.players[s.turn].name, view};
     await sb.from('games').update(upd).eq('id', s.gameId);
-  }, 250);
+  }
 }
 
 /* --- Acciones desde los celulares --- */
@@ -740,11 +808,12 @@ let lastAid = 0, pumping = false;
 function applyAction(a){
   if(!S || S.winner!=null) return;
   const i = S.players.findIndex(p => p.id === a.player_id); if(i<0) return;
+  if(a.n != null){ S.lastN = S.lastN || {}; if(+a.n <= (S.lastN[a.player_id] || 0)) return; S.lastN[a.player_id] = +a.n }
   if(a.seq != null && a.seq !== (S.seq||0)) return;
   const p = S.players[i], mine = i === S.turn, listen = S.phase === 'listen', tp = P(), k = a.slot == null ? -1 : +a.slot;
   if(a.kind === 'place'){
     if(!mine || !listen || S.ch.length || S.chMode!=null || !(k>=0 && k<=tp.tl.length)) return;
-    snap(); S.slot = S.slot===k ? null : k; render();
+    if(S.slot === k) return; snap(); S.slot = k; render();
   } else if(a.kind === 'skip'){
     if(!mine || !listen || p.tokens<1 || S.ch.length) return;
     snap(); p.tokens--; newCard(); render();
@@ -822,7 +891,7 @@ VIEWS.play = () => {
   nav([['undo','Deshacer'],['endgame','Terminar'],['games','Partidas']]);
   render(); if(S.phase==='listen' && S.winner==null) prefetch(S.card);
   if(sb && S.gameId){
-    pumpActions(); timers.push(setInterval(pumpActions, 1500));
+    pumpActions(); timers.push(setInterval(pumpActions, 2000)); startLive();
     channels.push(sb.channel('acts-' + S.gameId).on('postgres_changes', {event: 'INSERT', schema: 'public', table: 'game_actions', filter: 'game_id=eq.' + S.gameId}, pumpActions).subscribe());
   }
 };
