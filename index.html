@@ -204,15 +204,76 @@ VIEWS.join = () => {
     VIEWS.waiting();
   };
 };
+let phCh = false, lastPaint = '';
+const vOk = (tl, k, y) => (k===0 || y >= tl[k-1][0]) && (k===tl.length || y <= tl[k][0]);
+function vTimeline(v, pi, mode){
+  const p = v.players[pi], tl = p.tl; let h = '';
+  for(let k=0;k<=tl.length;k++){
+    const chs = (v.ch||[]).filter(c => c.slot===k), taken = chs.length>0 || v.slot===k;
+    const on = mode==='place' ? true : mode==='challenge' ? !taken : false;
+    const right = v.phase==='reveal' && v.res && !v.res.ok && v.card && vOk(tl, k, v.card.year);
+    const cls = ['slot', v.slot===k?'sel':'', chs.length?'ch':'', right?'right':''].join(' ');
+    h += `<button type="button" class="${cls}" data-pslot="${k}" ${on?'':'disabled'} aria-label="Posición ${k+1}">${v.slot===k?'▼':(on&&mode==='challenge'?'⚔':'+')}${chs.map(c => `<span class="tag">${esc((v.players[c.p]?.name||'').slice(0,6))}</span>`).join('')}</button>`;
+    if(k<tl.length) h += `<div class="sleeve"><span class="yr">${tl[k][0]}</span><small>${esc(tl[k][1])}<br>${esc(tl[k][2])}</small></div>`;
+  }
+  return `<div class="tl">${h}</div>`;
+}
+function paintGame(st, me){
+  const v = st.view, myi = v.players.findIndex(p => p.name.toLowerCase() === me.name.toLowerCase());
+  if(myi < 0){ app.innerHTML = `<section class="panel narrow"><h2>No estás en esta partida</h2><div class="row"><button type="button" id="bOut">Unirme a otra</button></div></section>`; $('#bOut').onclick = () => { ls(PKEY,null); history.replaceState(null,'',BASE); go('join') }; return }
+  const mine = myi === v.turn, tp = v.players[v.turn], iam = v.players[myi], listen = v.phase==='listen', reveal = v.phase==='reveal';
+  const free = tp.tl.length + 1 - (v.ch||[]).length - (v.slot==null?0:1);
+  const canCh = !mine && listen && v.slot!=null && iam.tokens>0 && !(v.ch||[]).some(c => c.p===myi) && free>0;
+  if(!canCh) phCh = false;
+  let top, tlMode = 'view', ctl = '';
+  if(mine && listen){
+    top = `<div class="turnbox">Tu turno · escucha la canción en el iPad</div><p class="who" style="margin:12px 0 4px">${v.slot==null?'Toca dónde va en tu línea de tiempo':'Posición elegida. Puedes cambiarla o revelar.'}</p>`;
+    tlMode = (v.ch||[]).length ? 'view' : 'place';
+    ctl = `<div class="row">
+      <button type="button" id="aSkip" ${iam.tokens<1||(v.ch||[]).length?'disabled':''}>Saltar (−1 ficha)</button>
+      <button type="button" id="aBuy" ${iam.tokens<3||v.slot!=null||(v.ch||[]).length?'disabled':''}>Comprar carta (3 fichas)</button>
+      <button type="button" class="pri" id="aRev" ${v.slot==null?'disabled':''}>Revelar</button></div>
+      ${(v.ch||[]).length?'<p class="hint">Hay desafíos: la posición ya no se puede cambiar.</p>':''}`;
+  } else if(reveal){
+    const c = v.card;
+    top = `<p class="who">Turno de ${esc(tp.name)} · resultado</p><div><span class="big">${c.year}</span></div><p style="margin:8px 0 0;font-weight:800">${esc(c.title)}</p><p style="margin:0" class="who">${esc(c.artist)}</p>
+      <span class="verdict ${v.res?.ok?'ok':'bad'}">${esc(v.res?.msg||'')}</span>`;
+    ctl = mine ? `<div class="row"><button type="button" class="pri" id="aNext">Siguiente turno</button></div>` : `<p class="hint">Espera a que ${esc(tp.name)} pase al siguiente turno.</p>`;
+    if(mine) ctl += `<p class="hint">Si nombraste artista y título, díselo al anfitrión para ganar una ficha.</p>`;
+  } else {
+    top = `<p class="who">Turno de ${esc(tp.name)}</p><h2 style="margin:4px 0 8px">${v.slot==null?'Está eligiendo la posición…':'Eligió una posición'}</h2>`;
+    tlMode = phCh ? 'challenge' : 'view';
+    ctl = canCh ? `<div class="row"><button type="button" class="${phCh?'pri':''}" id="aCh">${phCh?'Toca una posición libre ⚔ (cancelar)':'Desafiar (−1 ficha)'}</button></div>` : (listen && v.slot!=null && iam.tokens<1 ? '<p class="hint">No tienes fichas para desafiar.</p>' : '');
+  }
+  const mineTl = !mine ? `<p class="who" style="margin-top:18px">Tu línea de tiempo</p>${vTimeline({...v, slot:null, ch:[], phase:'x'}, myi, 'view')}` : '';
+  app.innerHTML = `<section class="panel">
+    <p class="who">Partida ${esc(st.code)} · gana quien junte ${st.win_cards} · tus fichas <span class="dots">${'●'.repeat(iam.tokens)}</span></p>
+    ${top}${vTimeline(v, v.turn, tlMode)}${ctl}${mineTl}
+    <ul class="list" style="margin-top:18px">${v.players.map((p,i) => `<li class="${i===myi?'me':''} ${i===v.turn?'turn':''}"><span><b>${esc(p.name)}</b></span><span><b>${p.tl.length}/${v.win}</b> <span class="dots">${'●'.repeat(p.tokens)}</span></span></li>`).join('')}</ul></section>`;
+  const act = async (kind, slot) => {
+    const {error} = await sb.rpc('send_action', {p_player_id: me.player_id, p_kind: kind, p_slot: slot ?? null, p_seq: v.seq});
+    if(error){ const m = document.createElement('p'); m.className = 'err'; m.textContent = error.message; app.firstElementChild.appendChild(m); return }
+    lastPaint = ''; setTimeout(() => { if(window.__phPoll) window.__phPoll() }, 600); setTimeout(() => { if(window.__phPoll) window.__phPoll() }, 1500);
+  };
+  $$('[data-pslot]').forEach(b => b.onclick = () => {
+    const k = +b.dataset.pslot;
+    if(tlMode === 'place') act('place', k);
+    else if(tlMode === 'challenge'){ phCh = false; act('challenge', k) }
+  });
+  const on = (id, fn) => { const el = $('#' + id); if(el) el.onclick = fn };
+  on('aSkip', () => act('skip')); on('aBuy', () => act('buy')); on('aRev', () => act('reveal')); on('aNext', () => act('next'));
+  on('aCh', () => { phCh = !phCh; lastPaint = ''; paintGame(st, me) });
+}
 VIEWS.waiting = () => {
   const me = ls(PKEY); if(!me) return VIEWS.join();
-  nav([['admin','Anfitrión']]);
+  nav([['admin','Anfitrión']]); lastPaint = ''; phCh = false;
   const paint = st => {
+    const key = JSON.stringify(st) + phCh; if(key === lastPaint) return; lastPaint = key;
     if(!st){ app.innerHTML = `<section class="panel narrow"><h2>La partida ya no existe</h2><div class="row"><button class="pri" type="button" id="bOut">Unirme a otra</button></div></section>`; $('#bOut').onclick = () => { ls(PKEY,null); history.replaceState(null,'',BASE); go('join') }; return }
+    if(st.status==='playing' && st.view && st.view.players) return paintGame(st, me);
     const inList = st.players.some(p => p.name.toLowerCase() === me.name.toLowerCase());
-    const myTurn = st.status==='playing' && st.turn_name && st.turn_name.toLowerCase() === me.name.toLowerCase();
-    const head = st.status==='lobby' ? (inList ? `<h2>Estás dentro, ${esc(me.name)}</h2><p class="hint">Espera a que el administrador inicie la partida.</p>` : `<h2>Te quitaron de la sala</h2>`)
-      : st.status==='playing' ? (myTurn ? `<div class="turnbox">¡Es tu turno! Mira el iPad</div>` : `<h2>Partida en curso</h2><p class="hint">Turno de ${esc(st.turn_name||'…')}</p>`)
+    const head = st.status==='lobby' ? (inList ? `<h2>Estás dentro, ${esc(me.name)}</h2><p class="hint">Espera a que el anfitrión inicie la partida.</p>` : `<h2>Te quitaron de la sala</h2>`)
+      : st.status==='playing' ? `<h2>Partida en curso</h2><p class="hint">Cargando la mesa…</p>`
       : st.status==='finished' ? `<p class="who">Ganador</p><div class="big">${esc(st.winner||'')}</div>` : `<h2>Partida cancelada</h2>`;
     app.innerHTML = `<section class="panel narrow">
       <p class="who">Partida ${esc(st.code)} · ${esc(st.deck_names)} · gana quien junte ${st.win_cards}</p>${head}
@@ -222,7 +283,7 @@ VIEWS.waiting = () => {
     if($('#bOut')) $('#bOut').onclick = () => { ls(PKEY,null); history.replaceState(null,'',BASE); go('join') };
   };
   const poll = async () => { const {data} = await sb.rpc('game_state', {p_code: me.code}); paint(data) };
-  poll(); timers.push(setInterval(poll, 3000));
+  window.__phPoll = poll; poll(); timers.push(setInterval(poll, 1500));
 };
 
 /* ===================== ADMIN ===================== */
@@ -528,20 +589,67 @@ async function startGame(g, players){
   const deck = shuffle(DECK.map((_,i)=>i));
   const ps = players.map(p => ({id: p.id, name: p.name, tokens: g.start_tokens, tl: [deck.pop()]}));
   let first = 0; ps.forEach((p,i) => { if(yr(p.tl[0]) < yr(ps[first].tl[0])) first = i });
-  S = {gameId: g.id, code: g.code, deckNames: g.deck_names, players: ps, deck, discard: [], turn: first, win: g.win_cards, phase: 'listen', card: deck.pop(), slot: null, ch: [], named: false, res: null, winner: null};
+  S = {gameId: g.id, code: g.code, deckNames: g.deck_names, players: ps, deck, discard: [], turn: first, win: g.win_cards, seq: 0, phase: 'listen', card: deck.pop(), slot: null, ch: [], named: false, res: null, winner: null};
   hist = []; store();
   await sb.from('games').update({status: 'playing', started_at: new Date().toISOString(), turn_name: ps[first].name}).eq('id', g.id);
   go('play');
+}
+let lastPl = {};
+function buildView(){
+  const rev = S.phase==='reveal' || S.winner!=null, c = DECK[S.card];
+  return {seq: S.seq||0, phase: S.winner!=null ? 'end' : S.phase, turn: S.turn, slot: S.slot, ch: S.ch, win: S.win, deckLeft: S.deck.length,
+    card: rev && c ? {year: c[2], artist: c[0], title: c[1]} : null, res: rev ? S.res : null, named: S.named,
+    players: S.players.map(p => ({name: p.name, tokens: p.tokens, tl: p.tl.map(k => [DECK[k][2], DECK[k][0], DECK[k][1]])}))};
 }
 function sync(){
   if(!sb || !S?.gameId) return;
   clearTimeout(syncT);
   syncT = setTimeout(async () => {
     const s = S; if(!s) return;
-    await Promise.all(s.players.map(p => sb.from('players').update({cards: p.tl.length, tokens: p.tokens}).eq('id', p.id)));
-    const upd = s.winner != null ? {status: 'finished', winner: s.players[s.winner].name, turn_name: null, finished_at: new Date().toISOString()} : {turn_name: s.players[s.turn].name};
+    await Promise.all(s.players.filter(p => lastPl[p.id] !== p.tl.length + '/' + p.tokens).map(async p => { const {error} = await sb.from('players').update({cards: p.tl.length, tokens: p.tokens}).eq('id', p.id); if(!error) lastPl[p.id] = p.tl.length + '/' + p.tokens }));
+    const view = buildView();
+    const upd = s.winner != null ? {status: 'finished', winner: s.players[s.winner].name, turn_name: null, finished_at: new Date().toISOString(), view} : {turn_name: s.players[s.turn].name, view};
     await sb.from('games').update(upd).eq('id', s.gameId);
-  }, 600);
+  }, 250);
+}
+
+/* --- Acciones desde los celulares --- */
+let lastAid = 0, pumping = false;
+function applyAction(a){
+  if(!S || S.winner!=null) return;
+  const i = S.players.findIndex(p => p.id === a.player_id); if(i<0) return;
+  if(a.seq != null && a.seq !== (S.seq||0)) return;
+  const p = S.players[i], mine = i === S.turn, listen = S.phase === 'listen', tp = P(), k = a.slot == null ? -1 : +a.slot;
+  if(a.kind === 'place'){
+    if(!mine || !listen || S.ch.length || S.chMode!=null || !(k>=0 && k<=tp.tl.length)) return;
+    snap(); S.slot = S.slot===k ? null : k; render();
+  } else if(a.kind === 'skip'){
+    if(!mine || !listen || p.tokens<1 || S.ch.length) return;
+    snap(); p.tokens--; newCard(); render();
+  } else if(a.kind === 'buy'){
+    if(!mine || !listen || p.tokens<3 || S.slot!=null || S.ch.length) return;
+    snap(); p.tokens-=3; S.discard.push(S.card); insertSorted(p.tl, draw()); finishTurn();
+  } else if(a.kind === 'challenge'){
+    if(mine || !listen || S.slot==null || p.tokens<1 || S.ch.some(x=>x.p===i) || !(k>=0 && k<=tp.tl.length) || k===S.slot || S.ch.some(x=>x.slot===k)) return;
+    snap(); p.tokens--; S.ch.push({p:i, slot:k}); S.chMode = null; render();
+  } else if(a.kind === 'reveal'){
+    if(!mine || !listen || S.slot==null) return;
+    reveal();
+  } else if(a.kind === 'next'){
+    if(!mine || S.phase!=='reveal') return;
+    snap(); finishTurn();
+  }
+}
+async function pumpActions(){
+  if(pumping || !sb || !S?.gameId) return;
+  pumping = true;
+  try{
+    const {data} = await sb.from('game_actions').select('*').eq('game_id', S.gameId).order('id');
+    if(data?.length){
+      for(const a of data){ if(a.id > lastAid){ lastAid = a.id; try{ applyAction(a) }catch(e){ console.error(e) } } }
+      await sb.from('game_actions').delete().in('id', data.map(a => a.id));
+    }
+  }finally{ pumping = false }
 }
 async function prefetch(i){
   const id = DECK[i]?.[3]; prev = {id, url:null, err:null, card:i};
@@ -561,7 +669,7 @@ au.addEventListener('pause', paintPlayer); au.addEventListener('ended', paintPla
 function insertSorted(tl, c){ const i = tl.findIndex(k => yr(k) > yr(c)); i<0 ? tl.push(c) : tl.splice(i,0,c) }
 function slotOk(tl, k, c){ const y = yr(c); return (k===0 || y >= yr(tl[k-1])) && (k===tl.length || y <= yr(tl[k])) }
 function draw(){ if(!S.deck.length) S.deck = shuffle(S.discard.splice(0)); return S.deck.length ? S.deck.pop() : S.card }
-function newCard(){ S.discard.push(S.card); S.card = draw(); S.slot = null; prefetch(S.card) }
+function newCard(){ S.discard.push(S.card); S.card = draw(); S.slot = null; S.seq = (S.seq||0)+1; prefetch(S.card) }
 
 function scoreBar(){
   $('#score').hidden = false;
@@ -589,6 +697,10 @@ VIEWS.play = () => {
   if(!S || !DECK.length) return go(isHost ? 'newgame' : 'admin');
   nav([['undo','Deshacer'],['endgame','Terminar'],['games','Partidas']]);
   render(); if(S.phase==='listen' && S.winner==null) prefetch(S.card);
+  if(sb && S.gameId){
+    pumpActions(); timers.push(setInterval(pumpActions, 1500));
+    channels.push(sb.channel('acts-' + S.gameId).on('postgres_changes', {event: 'INSERT', schema: 'public', table: 'game_actions', filter: 'game_id=eq.' + S.gameId}, pumpActions).subscribe());
+  }
 };
 VIEWS.undo = () => { if(hist.length && S){ const before = S.card; S = JSON.parse(hist.pop()); render(); if(S.card!==before && S.phase==='listen') prefetch(S.card) } nav([['undo','Deshacer'],['endgame','Terminar'],['games','Partidas']]) };
 VIEWS.endgame = () => {
@@ -674,7 +786,7 @@ function reveal(){
 function checkWin(){ const i = S.players.findIndex(q => q.tl.length >= S.win); if(i>=0) S.winner = i }
 function finishTurn(){
   checkWin();
-  if(S.winner==null){ S.turn = (S.turn+1) % S.players.length; S.card = draw(); S.phase='listen'; S.slot=null; S.ch=[]; S.named=false; S.res=null; S.chMode=null; prefetch(S.card) }
+  if(S.winner==null){ S.turn = (S.turn+1) % S.players.length; S.seq = (S.seq||0)+1; S.card = draw(); S.phase='listen'; S.slot=null; S.ch=[]; S.named=false; S.res=null; S.chMode=null; prefetch(S.card) }
   render();
 }
 
