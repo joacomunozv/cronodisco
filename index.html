@@ -99,6 +99,7 @@ th{font-size:13px;color:var(--soft);font-weight:600}
 .win .big{font-size:clamp(40px,7vw,72px);margin:12px 0}
 .note{font-size:13px;color:var(--soft);margin-top:18px}
 .bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:8px}.bar i{display:block;height:100%;background:var(--acc)}
+.chk{display:flex;gap:12px;align-items:flex-start;margin:14px 0;cursor:pointer}.chk input{width:22px;height:22px;margin-top:2px;flex:none}
 .turnbox{border-radius:16px;padding:18px;background:var(--acc);color:#fff;text-align:center;font-weight:800;font-size:22px}
 a{color:inherit}
 @media(max-width:900px){.play,.lobby{grid-template-columns:minmax(0,1fr)}.qrcol{max-width:420px;width:100%;margin:auto}}
@@ -204,7 +205,7 @@ VIEWS.join = () => {
     VIEWS.waiting();
   };
 };
-let phCh = false, lastPaint = '';
+let phCh = false, lastPaint = '', phAudio = {on: false, url: ''};
 const vOk = (tl, k, y) => (k===0 || y >= tl[k-1][0]) && (k===tl.length || y <= tl[k][0]);
 function vTimeline(v, pi, mode){
   const p = v.players[pi], tl = p.tl; let h = '';
@@ -245,10 +246,11 @@ function paintGame(st, me){
     tlMode = phCh ? 'challenge' : 'view';
     ctl = canCh ? `<div class="row"><button type="button" class="${phCh?'pri':''}" id="aCh">${phCh?'Toca una posición libre ⚔ (cancelar)':'Desafiar (−1 ficha)'}</button></div>` : (listen && v.slot!=null && iam.tokens<1 ? '<p class="hint">No tienes fichas para desafiar.</p>' : '');
   }
+  const audioBox = v.remote && listen ? `<div class="row" style="margin:0 0 12px"><button type="button" class="${phAudio.on?'':'pri'}" id="aSound" ${v.audio?'':'disabled'}>${!v.audio ? 'Cargando canción…' : phAudio.on ? '▶ Escuchar / pausar' : '🔊 Activar sonido'}</button></div>` : '';
   const mineTl = !mine ? `<p class="who" style="margin-top:18px">Tu línea de tiempo</p>${vTimeline({...v, slot:null, ch:[], phase:'x'}, myi, 'view')}` : '';
   app.innerHTML = `<section class="panel">
     <p class="who">Partida ${esc(st.code)} · gana quien junte ${st.win_cards} · tus fichas <span class="dots">${'●'.repeat(iam.tokens)}</span></p>
-    ${top}${vTimeline(v, v.turn, tlMode)}${ctl}${mineTl}
+    ${audioBox}${top}${vTimeline(v, v.turn, tlMode)}${ctl}${mineTl}
     <ul class="list" style="margin-top:18px">${v.players.map((p,i) => `<li class="${i===myi?'me':''} ${i===v.turn?'turn':''}"><span><b>${esc(p.name)}</b></span><span><b>${p.tl.length}/${v.win}</b> <span class="dots">${'●'.repeat(p.tokens)}</span></span></li>`).join('')}</ul></section>`;
   const act = async (kind, slot) => {
     const {error} = await sb.rpc('send_action', {p_player_id: me.player_id, p_kind: kind, p_slot: slot ?? null, p_seq: v.seq});
@@ -262,6 +264,13 @@ function paintGame(st, me){
   });
   const on = (id, fn) => { const el = $('#' + id); if(el) el.onclick = fn };
   on('aSkip', () => act('skip')); on('aBuy', () => act('buy')); on('aRev', () => act('reveal')); on('aNext', () => act('next'));
+  on('aSound', () => {
+    if(!v.audio) return;
+    if(!phAudio.on || phAudio.url !== v.audio){ phAudio = {on: true, url: v.audio}; au.src = v.audio; au.play().catch(()=>{}); lastPaint = ''; paintGame(st, me) }
+    else if(au.paused || au.ended){ if(au.ended) au.currentTime = 0; au.play().catch(()=>{}) } else au.pause();
+  });
+  if(phAudio.on && v.audio && phAudio.url !== v.audio){ phAudio.url = v.audio; au.src = v.audio; au.play().catch(()=>{}) }
+  if(!v.audio && phAudio.url){ au.pause(); phAudio.url = '' }
   on('aCh', () => { phCh = !phCh; lastPaint = ''; paintGame(st, me) });
 }
 VIEWS.waiting = () => {
@@ -441,6 +450,7 @@ VIEWS.newgame = async () => {
       <label>Cartas para ganar<input id="oWin" type="number" min="3" max="20" value="10" inputmode="numeric"></label>
       <label>Fichas iniciales<input id="oTok" type="number" min="0" max="5" value="2" inputmode="numeric"></label>
     </div>
+    <label class="chk"><input type="checkbox" id="oRemote"><span><b>Música también en los celulares</b><br><small class="who">Para jugar a distancia: la canción suena en el teléfono de cada jugador.</small></span></label>
     <button class="pri" type="button" id="bCreate" style="width:100%">Crear sala</button><p class="hint" id="nMsg"></p></section>`;
   $('#bCreate').onclick = async () => {
     const ids = $$('.decks input:checked').map(i => i.value);
@@ -451,7 +461,7 @@ VIEWS.newgame = async () => {
     const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     for(let k=0;k<5;k++){
       const code = Array.from({length:4}, () => A[Math.floor(Math.random()*A.length)]).join('');
-      const {data, error} = await sb.from('games').insert({code, deck_ids: ids, deck_names: names, win_cards: win, start_tokens: tok, host_name: profile?.name || session?.user?.email || ''}).select().single();
+      const {data, error} = await sb.from('games').insert({code, deck_ids: ids, deck_names: names, win_cards: win, start_tokens: tok, remote_audio: $('#oRemote').checked, host_name: profile?.name || session?.user?.email || ''}).select().single();
       if(!error) return go('lobby', data.id);
       if(!/duplicate|unique/i.test(error.message)){ $('#nMsg').innerHTML = `<span class="err">${esc(error.message)}</span>`; return }
     }
@@ -467,12 +477,16 @@ VIEWS.lobby = async gid => {
   const link = BASE + '?c=' + g.code;
   app.innerHTML = `<div class="lobby">
     <section class="panel"><p class="who">Escanea para unirte</p><div class="qr">${qrSvg(link)}</div>
-      <p class="who" style="margin-top:14px">o entra a la app y escribe</p><div class="code">${esc(g.code)}</div></section>
+      <p class="who" style="margin-top:14px">o entra a la app y escribe</p><div class="code">${esc(g.code)}</div>
+      <p class="who" style="margin-top:14px">o invita por enlace</p>
+      <div class="row"><button type="button" id="bCopy">Copiar enlace</button><button type="button" id="bShare">Compartir</button><a class="btn" id="bWa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent('Únete a mi partida de Cronodisco: ' + link + ' (código ' + g.code + ')')}">WhatsApp</a></div><p class="hint" id="cpMsg"></p></section>
     <section class="panel"><p class="who">${esc(g.deck_names)} · gana quien junte ${g.win_cards} · ${g.start_tokens} fichas iniciales</p>
       <h2>Jugadores en la sala</h2><ul class="list" id="pl"><li><small>Esperando jugadores…</small></li></ul>
       <form class="row" id="fAddP"><input id="pAdd" maxlength="18" placeholder="Agregar jugador sin celular" aria-label="Nombre del jugador"><button type="submit" style="flex:0 0 auto">Agregar</button></form>
       <div class="row"><button type="button" class="ghost danger" id="bCancel">Cancelar partida</button><button type="button" class="pri" id="bStart" disabled>Empezar partida</button></div>
       <p class="hint" id="lbMsg"></p></section></div>`;
+  $('#bCopy').onclick = async () => { try{ await navigator.clipboard.writeText(link); $('#cpMsg').textContent = 'Enlace copiado.' }catch(e){ $('#cpMsg').textContent = link } };
+  $('#bShare').onclick = async () => { if(navigator.share){ try{ await navigator.share({title: 'Cronodisco', text: 'Únete a mi partida de Cronodisco (código ' + g.code + ')', url: link}) }catch(e){} } else { try{ await navigator.clipboard.writeText(link); $('#cpMsg').textContent = 'Enlace copiado.' }catch(e){ $('#cpMsg').textContent = link } } };
   let players = [];
   const paint = () => {
     $('#pl').innerHTML = players.length ? players.map(p => `<li><span><b>${esc(p.name)}</b> <small>· ${esc(p.joined_from)} · ${fmtDate(p.joined_at)}</small></span><button type="button" class="ghost" data-rm="${esc(p.id)}" aria-label="Quitar a ${esc(p.name)}">Quitar</button></li>`).join('') : '<li><small>Esperando jugadores…</small></li>';
@@ -589,7 +603,7 @@ async function startGame(g, players){
   const deck = shuffle(DECK.map((_,i)=>i));
   const ps = players.map(p => ({id: p.id, name: p.name, tokens: g.start_tokens, tl: [deck.pop()]}));
   let first = 0; ps.forEach((p,i) => { if(yr(p.tl[0]) < yr(ps[first].tl[0])) first = i });
-  S = {gameId: g.id, code: g.code, deckNames: g.deck_names, players: ps, deck, discard: [], turn: first, win: g.win_cards, seq: 0, phase: 'listen', card: deck.pop(), slot: null, ch: [], named: false, res: null, winner: null};
+  S = {gameId: g.id, code: g.code, deckNames: g.deck_names, players: ps, deck, discard: [], turn: first, win: g.win_cards, seq: 0, remote: !!g.remote_audio, phase: 'listen', card: deck.pop(), slot: null, ch: [], named: false, res: null, winner: null};
   hist = []; store();
   await sb.from('games').update({status: 'playing', started_at: new Date().toISOString(), turn_name: ps[first].name}).eq('id', g.id);
   go('play');
@@ -598,7 +612,7 @@ let lastPl = {};
 function buildView(){
   const rev = S.phase==='reveal' || S.winner!=null, c = DECK[S.card];
   return {seq: S.seq||0, phase: S.winner!=null ? 'end' : S.phase, turn: S.turn, slot: S.slot, ch: S.ch, win: S.win, deckLeft: S.deck.length,
-    card: rev && c ? {year: c[2], artist: c[0], title: c[1]} : null, res: rev ? S.res : null, named: S.named,
+    card: rev && c ? {year: c[2], artist: c[0], title: c[1]} : null, remote: !!S.remote, audio: S.remote && S.phase==='listen' && S.winner==null && prev.card===S.card && prev.url ? prev.url : null, res: rev ? S.res : null, named: S.named,
     players: S.players.map(p => ({name: p.name, tokens: p.tokens, tl: p.tl.map(k => [DECK[k][2], DECK[k][0], DECK[k][1]])}))};
 }
 function sync(){
@@ -658,7 +672,7 @@ async function prefetch(i){
   try{
     const d = await jsonp('https://api.deezer.com/track/' + id);
     if(prev.card !== i) return;
-    if(d.error || !d.preview) prev.err = 'Sin fragmento disponible'; else { prev.url = d.preview; au.src = d.preview; au.load() }
+    if(d.error || !d.preview) prev.err = 'Sin fragmento disponible'; else { prev.url = d.preview; au.src = d.preview; au.load(); if(S?.remote) sync() }
   }catch(e){ if(prev.card===i) prev.err = 'Sin conexión con Deezer' }
   paintPlayer();
 }

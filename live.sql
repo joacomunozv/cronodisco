@@ -52,3 +52,6 @@ grant execute on function public.send_action(uuid, text, int, int) to anon, auth
 do $$ begin
   begin alter publication supabase_realtime add table public.game_actions; exception when duplicate_object then null; end;
 end $$;
+
+-- Música en los celulares (juego a distancia)
+alter table public.games add column if not exists remote_audio boolean not null default false;
