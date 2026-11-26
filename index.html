@@ -513,15 +513,26 @@ VIEWS.games = async () => {
   const {data, error} = await sb.from('games').select('id,code,deck_names,status,winner,created_at,win_cards,host_name,players(name,cards)').order('created_at', {ascending: false}).limit(40);
   if(error){ app.innerHTML = `<section class="panel"><p class="err">${esc(error.message)}</p></section>`; return }
   const lbl = {lobby:'En sala', playing:'Jugando', finished:'Terminada', cancelled:'Cancelada'};
-  const cur = ls(KEY);
+  let cur = ls(KEY);
+  if(cur && !data.some(g => g.id === cur.gameId && g.status === 'playing')) cur = null;
+  const open = data.filter(g => g.status === 'lobby' || g.status === 'playing');
   app.innerHTML = `<section class="panel"><p class="who">Historial</p><h2>Partidas</h2>
+    ${open.length ? `<div class="row"><button type="button" class="ghost danger" id="bCloseAll">Cerrar todas las abiertas (${open.length})</button></div>` : ''}
     ${cur && !cur.winner ? `<div class="row"><button class="pri" type="button" id="bResume">Volver a la partida en curso (${esc(cur.code)})</button></div>` : ''}
     <table class="stack"><thead><tr><th>Código</th><th>Fecha</th>${isAdmin ? '<th>Anfitrión</th>' : ''}<th>Mazo</th><th>Estado</th><th>Jugadores</th><th>Ganador</th><th></th></tr></thead><tbody>
     ${data.map(g => `<tr><td><b>${esc(g.code)}</b></td><td>${fmtDate(g.created_at)}</td>${isAdmin ? `<td>${esc(g.host_name||'')}</td>` : ''}<td>${esc(g.deck_names)}</td><td><span class="pill st-${esc(g.status)}">${lbl[g.status]||esc(g.status)}</span></td>
       <td>${g.players.map(p => esc(p.name) + (g.status==='lobby' ? '' : ` (${p.cards})`)).join(', ') || '<small class="who">nadie aún</small>'}</td><td>${esc(g.winner||'')}</td>
-      <td>${g.status==='lobby' ? `<button type="button" data-open="${esc(g.id)}">Abrir sala</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="8" class="who">Aún no hay partidas.</td></tr>'}
+      <td>${g.status==='lobby' ? `<button type="button" data-open="${esc(g.id)}">Abrir sala</button> ` : ''}${g.status==='lobby'||g.status==='playing' ? `<button type="button" class="ghost danger" data-close="${esc(g.id)}" data-code="${esc(g.code)}">Cerrar</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="8" class="who">Aún no hay partidas.</td></tr>'}
     </tbody></table></section>`;
   $$('[data-open]').forEach(b => b.onclick = () => go('lobby', b.dataset.open));
+  const closeGames = async ids => {
+    const {error} = await sb.from('games').update({status: 'cancelled', turn_name: null, finished_at: new Date().toISOString()}).in('id', ids).in('status', ['lobby','playing']);
+    if(error){ alert(error.message); return }
+    const st = ls(KEY); if(st && ids.includes(st.gameId)){ au.pause(); ls(KEY, null); S = null }
+    go('games');
+  };
+  $$('[data-close]').forEach(b => b.onclick = () => confirmBox('¿Cerrar la partida ' + b.dataset.code + '?', 'Quedará como cancelada y los jugadores verán que terminó.', 'Cerrar partida', () => closeGames([b.dataset.close])));
+  if($('#bCloseAll')) $('#bCloseAll').onclick = () => confirmBox('¿Cerrar todas las partidas abiertas?', `Se cerrarán ${open.length} partida(s) en sala o en juego. Los jugadores verán que terminaron.`, 'Cerrar todas', () => closeGames(open.map(g => g.id)));
   if($('#bResume')) $('#bResume').onclick = () => go('play');
 };
 
