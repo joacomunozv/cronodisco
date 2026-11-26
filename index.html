@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Cronodisco">
-<meta name="theme-color" content="#5c1424">
+<meta name="theme-color" content="#0b0720">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-180.png">
 <title>Cronodisco</title>
@@ -18,10 +18,10 @@
    PICTURE: a spinning record that plays the hidden song beside the player's shelf
    COLOUR and TYPE: oxblood ground, paper sleeves, hot pink accent; Archivo Black + Archivo
    LAYOUT: score strip on top, player left, timeline right; stacks under 900px */
-:root{color-scheme:light dark;
---bg:light-dark(#f4eee6,#1c0b10);--ink:light-dark(#22090f,#f6ece3);--soft:light-dark(#7a5a60,#c9a9ad);
---band:light-dark(#5c1424,#3a1119);--bandink:#fbeee6;--card:light-dark(#fffaf3,#2c1318);--line:light-dark(#e2d4c8,#4a2229);
---acc:#ff3d6e;--ok:#1f9d6b;--bad:#d8363c}
+:root{color-scheme:dark;
+--bg:#0b0720;--ink:#f5f2ff;--soft:#b9b1e8;
+--band:#120a3a;--bandink:#f5f2ff;--card:#171048;--line:#3a2d8f;
+--acc:#ff2d8f;--ok:#22d36b;--bad:#ff4d5e;--cy:#22d3ee;--vi:#8b5cf6}
 *{box-sizing:border-box;min-width:0}
 body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.45 Archivo,system-ui,sans-serif;overflow-x:clip;-webkit-tap-highlight-color:transparent;padding-bottom:env(safe-area-inset-bottom)}
 h1,h2,h3,.yr,.big{font-family:"Archivo Black",Archivo,system-ui,sans-serif;font-weight:400;line-height:1.05;margin:0}
@@ -105,6 +105,73 @@ a{color:inherit}
 @media(max-width:900px){.play,.lobby{grid-template-columns:minmax(0,1fr)}.qrcol{max-width:420px;width:100%;margin:auto}}
 @media(max-width:600px){.sleeve{width:96px}.sleeve .yr{font-size:22px}h2{font-size:28px}.big{font-size:40px}
   .stack thead{display:none}.stack tr{display:grid;padding-block:10px;border-bottom:1px solid var(--line)}.stack td{border:0;padding:2px 0}}
+
+/* ===== TEMA NEÓN ===== */
+.sleeve .cov{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+.sleeve:has(.cov:not([hidden]))::before{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,#000b 0,#0000 38%,#0000 50%,#000d 100%)}
+.sleeve:has(.cov:not([hidden]))::after{display:none}
+.sleeve .yr,.sleeve small{position:relative;z-index:2}
+.sleeve:has(.cov:not([hidden])) small{opacity:1;text-shadow:0 1px 3px #000}
+.revart{position:relative;width:min(230px,68%);aspect-ratio:1;margin:10px 0 18px}
+.revart img{position:relative;z-index:1;width:100%;height:100%;object-fit:cover;border-radius:12px;transform:rotate(-5deg);box-shadow:0 14px 34px #000c,0 0 0 3px #ffffff30,0 0 30px #ff2d8f55}
+.revart .vin{position:absolute;z-index:0;top:4%;left:30%;width:92%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,#ff2d8f 0 13%,#111 14% 16%,transparent 17%),repeating-radial-gradient(circle,#0c0c14 0 2px,#22222e 2px 4px);box-shadow:0 10px 30px #000a,0 0 24px #8b5cf666;animation:spin 6s linear infinite}
+@media(prefers-reduced-motion:reduce){.revart .vin{animation:none}}
+body{background:radial-gradient(1200px 700px at 12% -10%,#3b1a8a55,transparent 60%),radial-gradient(900px 600px at 100% 0%,#ff2d8f33,transparent 55%),radial-gradient(900px 700px at 50% 120%,#22d3ee22,transparent 60%),linear-gradient(180deg,#0b0720,#120a3a 60%,#0b0720);background-attachment:fixed;min-height:100vh;position:relative}
+body::before,body::after{content:"";position:fixed;z-index:-1;border-radius:50%;pointer-events:none;background:repeating-radial-gradient(circle,#ffffff0d 0 2px,#ffffff03 2px 5px),radial-gradient(circle,transparent 0 22%,#ff2d8f 22% 30%,transparent 30%)}
+body::before{width:520px;height:520px;right:-170px;top:-150px;opacity:.55;filter:drop-shadow(0 0 30px #8b5cf6aa)}
+body::after{width:640px;height:640px;left:-260px;bottom:-280px;opacity:.45;filter:drop-shadow(0 0 40px #22d3eeaa)}
+header{background:transparent;border-bottom:1px solid #ffffff14;backdrop-filter:blur(8px)}
+header h1{font-size:30px;font-style:italic;letter-spacing:.02em;text-transform:uppercase;background:linear-gradient(90deg,#ff5cab,#ffd166 45%,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 10px #ff2d8f99)}
+header button{border-radius:999px;border-color:#ffffff2e}
+header button.on{background:linear-gradient(90deg,#ff2d8f,#8b5cf6);border-color:transparent}
+.score{background:transparent;border-top:0;padding-top:12px;gap:10px}
+.chip{background:#ffffff0c;border:2px solid #ffffff22;border-radius:18px;padding:6px 14px 6px 6px;gap:10px;backdrop-filter:blur(6px)}
+.chip.on{background:linear-gradient(90deg,#ff2d8f,#8b5cf6);border-color:#fff6;box-shadow:0 0 22px #ff2d8f88}
+.chip b{font-size:18px}
+.av{--c:#ff2d8f;width:34px;height:34px;flex:none;border-radius:50%;display:inline-grid;place-items:center;font:400 17px "Archivo Black",system-ui;color:#fff;background:radial-gradient(circle at 30% 25%,#fff5,transparent 45%),var(--c);box-shadow:0 0 0 3px #0b0720,0 0 0 5px var(--c),0 0 14px var(--c)}
+.crown{margin-left:-4px}
+.panel{background:linear-gradient(160deg,#1b1255ee,#120a3aee);border:2px solid transparent;background-clip:padding-box;border-radius:22px;position:relative;box-shadow:0 10px 40px #0008}
+.panel::before{content:"";position:absolute;inset:-2px;border-radius:24px;z-index:-1;background:linear-gradient(135deg,#ff2d8f88,#8b5cf688 50%,#22d3ee88)}
+.overlay .panel,.win{isolation:isolate}
+button,.btn{border-radius:999px;border:2px solid #ffffff2a;background:#ffffff10;color:var(--ink);font-weight:700}
+button:hover:not(:disabled){background:#ffffff1c}
+button.pri,.btn.pri{background:linear-gradient(90deg,#22d36b,#10b981);border-color:#9fffd0aa;color:#04200f;box-shadow:0 0 24px #22d36b66;font-weight:800}
+button.pri:hover:not(:disabled){filter:brightness(1.1)}
+button.ghost{background:transparent}
+button.danger{color:#ff8a96;border-color:#ff4d5e66}
+input,select,textarea{background:#0b0720aa;border-radius:14px;border-color:#3a2d8f}
+.who{color:#b9b1e8;letter-spacing:.06em;text-transform:uppercase;font-size:13px}
+h2{text-shadow:0 0 18px #8b5cf688}
+.deck{background:radial-gradient(circle,#2a1a7a,#0b0720 72%);box-shadow:inset 0 0 60px #8b5cf655,0 0 40px #ff2d8f33}
+.rec{background:repeating-radial-gradient(circle,#0c0c14 0 2px,#1d1d2c 2px 4px);box-shadow:0 0 0 3px #ff2d8f88,0 0 40px #ff2d8f99,inset 0 0 0 8px #0a0a12;position:relative}
+.rec::after{background:radial-gradient(circle,#ffd166 0 12%,#ff2d8f 13%);box-shadow:inset 0 0 0 5px #0003,0 0 16px #ff2d8f}
+.rec.spin{animation-duration:1.8s}
+.playlbl{color:#fff;text-shadow:0 0 10px #000}
+.slot{border:2px dashed #8b5cf6aa;color:#8b5cf6;border-radius:16px;background:#ffffff06}
+.slot:hover:not(:disabled){background:#8b5cf622}
+.slot.sel{border-color:var(--cy);background:#22d3ee22;color:var(--cy);box-shadow:0 0 22px #22d3ee88}
+.slot.ch{border-color:#ffd166;box-shadow:0 0 16px #ffd16688}
+.slot .tag{background:#ffd166;color:#241a00;font-weight:800}
+.slot.right{border-color:var(--ok);background:#22d36b22;box-shadow:0 0 22px #22d36b88}
+.sleeve{border-radius:16px;color:#fff;background:linear-gradient(160deg,hsl(var(--h,320) 85% 52%),hsl(calc(var(--h,320) + 50) 80% 26%));box-shadow:0 6px 18px #0008,inset 0 0 0 2px #ffffff2a;position:relative;overflow:hidden}
+.sleeve::after{content:"";position:absolute;right:-30px;bottom:-30px;width:90px;height:90px;border-radius:50%;background:repeating-radial-gradient(circle,#0003 0 2px,#0000 2px 5px),radial-gradient(circle,#0000 0 24%,#0004 25%);pointer-events:none}
+.sleeve .yr{font-size:30px;text-shadow:0 2px 0 #0004}
+.verdict{font-size:24px;padding:12px 22px;border-radius:18px;box-shadow:0 0 30px currentColor;border:2px solid #fff5}
+.verdict.ok{background:linear-gradient(90deg,#22d36b,#10b981);color:#04200f;box-shadow:0 0 34px #22d36b99}
+.verdict.bad{background:linear-gradient(90deg,#ff4d5e,#e11d48);color:#fff;box-shadow:0 0 34px #ff4d5e99}
+.turnbox{background:linear-gradient(90deg,#ff2d8f,#8b5cf6);border-radius:20px;box-shadow:0 0 30px #ff2d8f77;font-size:22px}
+.list li{background:#ffffff08;border:2px solid #ffffff1c;border-radius:16px;gap:12px}
+.list li>span:first-child{display:flex;align-items:center;gap:10px}
+.list li.me{border-color:var(--cy)}
+.list li.turn{background:linear-gradient(90deg,#ff2d8f33,#8b5cf633);border-color:var(--acc);box-shadow:0 0 18px #ff2d8f55}
+.decks label{background:#ffffff08;border-radius:16px;border-color:#ffffff22}
+.decks label:has(input:checked){border-color:var(--cy);background:#22d3ee14;box-shadow:0 0 16px #22d3ee44}
+.code{background:linear-gradient(90deg,#ff5cab,#ffd166,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 14px #ff2d8f88)}
+.big{text-shadow:0 0 24px #ff2d8f99}
+.pill.st-lobby{background:var(--vi)}.pill.st-finished{background:var(--ok);color:#04200f}
+.bar{background:#ffffff18}.bar i{background:linear-gradient(90deg,#22d3ee,#8b5cf6)}
+th,td{border-bottom-color:#ffffff14}
+.qr{box-shadow:0 0 36px #22d3ee66}
 </style>
 </head>
 <body>
@@ -130,6 +197,9 @@ if(/^#admin[#&?]/.test(location.hash)) history.replaceState(null, '', location.p
 const sb = window.supabase && cfg.supabaseUrl && !/SUPABASE_/.test(cfg.supabaseUrl) ? window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey) : null;
 const BASE = location.origin + location.pathname;
 const KEY = 'cronodisco-game-v3', PKEY = 'cronodisco-player-v3';
+const AVC = ['#ff2d8f','#22d3ee','#8b5cf6','#facc15','#22d36b','#fb923c','#60a5fa','#f472b6'];
+function av(name){ let h = 0; for(const c of String(name)) h = (h*31 + c.charCodeAt(0)) >>> 0; return `<span class="av" style="--c:${AVC[h % AVC.length]}">${esc((String(name).trim()[0]||'?').toUpperCase())}</span>` }
+const hue = y => Math.round(Math.max(0, Math.min(1, (y - 1950) / 80)) * 300);
 function ls(k, v){ try{ if(v===undefined) return JSON.parse(localStorage.getItem(k)||'null'); if(v===null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); }catch(e){ return null } }
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]] } return a }
 const fmtDate = d => d ? new Date(d).toLocaleString('es-CL', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}) : '';
@@ -160,6 +230,33 @@ function jsonp(url){
   });
 }
 const norm = s => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\(.*?\)|\[.*?\]/g,' ').replace(/ - .*$/,' ').replace(/feat\..*$/,' ').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+/* --- Portadas de Deezer (gratis, sin clave) --- */
+const COV = ls('cronodisco-cov') || {}, covPend = new Set(), covQ = []; let covRun = 0, covSaveT = null;
+const covBig = u => u ? u.replace('250x250', '500x500') : '';
+function covSet(id, url){
+  COV[id] = url || ''; clearTimeout(covSaveT); covSaveT = setTimeout(() => ls('cronodisco-cov', COV), 500);
+  if(!url) return;
+  $$(`img[data-cov="${id}"]`).forEach(im => { im.src = url; im.hidden = false });
+  $$(`img[data-covbig="${id}"]`).forEach(im => { im.src = covBig(url); im.hidden = false });
+  if(S?.gameId) sync();
+}
+function needCov(id){
+  if(!id || COV[id] !== undefined || covPend.has(id)) return;
+  covPend.add(id); covQ.push(id); covPump();
+}
+function covPump(){
+  while(covRun < 3 && covQ.length){
+    const id = covQ.shift(); covRun++;
+    jsonp('https://api.deezer.com/track/' + id).then(d => covSet(id, d?.album?.cover_medium || '')).catch(() => {}).finally(() => { covRun--; covPend.delete(id); covPump() });
+  }
+}
+function covImg(id){ if(!id) return ''; needCov(id); const u = COV[id]; return `<img class="cov" data-cov="${esc(id)}" alt="" ${u ? `src="${esc(u)}"` : 'hidden'}>` }
+function revArt(url, id){
+  if(id) needCov(id);
+  const u = url || (id ? COV[id] : '');
+  return `<div class="revart"><i class="vin"></i><img ${id ? `data-covbig="${esc(id)}"` : ''} alt="Portada del disco" ${u ? `src="${esc(covBig(u))}"` : 'hidden'}></div>`;
+}
+
 async function findDeezer(a, t){
   const a1 = a.split(/ feat\.| & | and | x |, /i)[0];
   let d = (await jsonp('https://api.deezer.com/search?limit=25&q=' + encodeURIComponent(`artist:"${a1}" track:"${t}"`))).data || [];
@@ -215,7 +312,7 @@ function vTimeline(v, pi, mode){
     const right = v.phase==='reveal' && v.res && !v.res.ok && v.card && vOk(tl, k, v.card.year);
     const cls = ['slot', v.slot===k?'sel':'', chs.length?'ch':'', right?'right':''].join(' ');
     h += `<button type="button" class="${cls}" data-pslot="${k}" ${on?'':'disabled'} aria-label="Posición ${k+1}">${v.slot===k?'▼':(on&&mode==='challenge'?'⚔':'+')}${chs.map(c => `<span class="tag">${esc((v.players[c.p]?.name||'').slice(0,6))}</span>`).join('')}</button>`;
-    if(k<tl.length) h += `<div class="sleeve"><span class="yr">${tl[k][0]}</span><small>${esc(tl[k][1])}<br>${esc(tl[k][2])}</small></div>`;
+    if(k<tl.length) h += `<div class="sleeve" style="--h:${hue(tl[k][0])}">${tl[k][3] ? `<img class="cov" alt="" src="${esc(tl[k][3])}">` : ''}<span class="yr">${tl[k][0]}</span><small>${esc(tl[k][1])}<br>${esc(tl[k][2])}</small></div>`;
   }
   return `<div class="tl">${h}</div>`;
 }
@@ -237,7 +334,7 @@ function paintGame(st, me){
       ${(v.ch||[]).length?'<p class="hint">Hay desafíos: la posición ya no se puede cambiar.</p>':''}`;
   } else if(reveal){
     const c = v.card;
-    top = `<p class="who">Turno de ${esc(tp.name)} · resultado</p><div><span class="big">${c.year}</span></div><p style="margin:8px 0 0;font-weight:800">${esc(c.title)}</p><p style="margin:0" class="who">${esc(c.artist)}</p>
+    top = `<p class="who">Turno de ${esc(tp.name)} · resultado</p>${revArt(c.cover)}<div><span class="big">${c.year}</span></div><p style="margin:8px 0 0;font-weight:800">${esc(c.title)}</p><p style="margin:0" class="who">${esc(c.artist)}</p>
       <span class="verdict ${v.res?.ok?'ok':'bad'}">${esc(v.res?.msg||'')}</span>`;
     ctl = mine ? `<div class="row"><button type="button" class="pri" id="aNext">Siguiente turno</button></div>` : `<p class="hint">Espera a que ${esc(tp.name)} pase al siguiente turno.</p>`;
     if(mine) ctl += `<p class="hint">Si nombraste artista y título, díselo al anfitrión para ganar una ficha.</p>`;
@@ -251,7 +348,7 @@ function paintGame(st, me){
   app.innerHTML = `<section class="panel">
     <p class="who">Partida ${esc(st.code)} · gana quien junte ${st.win_cards} · tus fichas <span class="dots">${'●'.repeat(iam.tokens)}</span></p>
     ${audioBox}${top}${vTimeline(v, v.turn, tlMode)}${ctl}${mineTl}
-    <ul class="list" style="margin-top:18px">${v.players.map((p,i) => `<li class="${i===myi?'me':''} ${i===v.turn?'turn':''}"><span><b>${esc(p.name)}</b></span><span><b>${p.tl.length}/${v.win}</b> <span class="dots">${'●'.repeat(p.tokens)}</span></span></li>`).join('')}</ul></section>`;
+    <ul class="list" style="margin-top:18px">${v.players.map((p,i) => `<li class="${i===myi?'me':''} ${i===v.turn?'turn':''}"><span>${av(p.name)}<b>${esc(p.name)}</b></span><span><b>${p.tl.length}/${v.win}</b> <span class="dots">${'●'.repeat(p.tokens)}</span></span></li>`).join('')}</ul></section>`;
   const act = async (kind, slot) => {
     const {error} = await sb.rpc('send_action', {p_player_id: me.player_id, p_kind: kind, p_slot: slot ?? null, p_seq: v.seq});
     if(error){ const m = document.createElement('p'); m.className = 'err'; m.textContent = error.message; app.firstElementChild.appendChild(m); return }
@@ -286,7 +383,7 @@ VIEWS.waiting = () => {
       : st.status==='finished' ? `<p class="who">Ganador</p><div class="big">${esc(st.winner||'')}</div>` : `<h2>Partida cancelada</h2>`;
     app.innerHTML = `<section class="panel narrow">
       <p class="who">Partida ${esc(st.code)} · ${esc(st.deck_names)} · gana quien junte ${st.win_cards}</p>${head}
-      <ul class="list">${st.players.map(p => `<li class="${p.name.toLowerCase()===me.name.toLowerCase()?'me':''} ${st.status==='playing'&&p.name===st.turn_name?'turn':''}"><span><b>${esc(p.name)}</b></span>${st.status==='lobby'?'':`<span><b>${p.cards}/${st.win_cards}</b> <span class="dots">${'●'.repeat(p.tokens)}</span></span>`}</li>`).join('')}</ul>
+      <ul class="list">${st.players.map(p => `<li class="${p.name.toLowerCase()===me.name.toLowerCase()?'me':''} ${st.status==='playing'&&p.name===st.turn_name?'turn':''}"><span>${av(p.name)}<b>${esc(p.name)}</b></span>${st.status==='lobby'?'':`<span><b>${p.cards}/${st.win_cards}</b> <span class="dots">${'●'.repeat(p.tokens)}</span></span>`}</li>`).join('')}</ul>
       <div class="row">${st.status==='lobby' && inList ? `<button type="button" class="ghost" id="bLeave">Salir de la sala</button>` : `<button type="button" id="bOut">Unirme a otra partida</button>`}</div></section>`;
     if($('#bLeave')) $('#bLeave').onclick = async () => { await sb.rpc('leave_game', {p_player_id: me.player_id}); ls(PKEY,null); go('join') };
     if($('#bOut')) $('#bOut').onclick = () => { ls(PKEY,null); history.replaceState(null,'',BASE); go('join') };
@@ -489,7 +586,7 @@ VIEWS.lobby = async gid => {
   $('#bShare').onclick = async () => { if(navigator.share){ try{ await navigator.share({title: 'Cronodisco', text: 'Únete a mi partida de Cronodisco (código ' + g.code + ')', url: link}) }catch(e){} } else { try{ await navigator.clipboard.writeText(link); $('#cpMsg').textContent = 'Enlace copiado.' }catch(e){ $('#cpMsg').textContent = link } } };
   let players = [];
   const paint = () => {
-    $('#pl').innerHTML = players.length ? players.map(p => `<li><span><b>${esc(p.name)}</b> <small>· ${esc(p.joined_from)} · ${fmtDate(p.joined_at)}</small></span><button type="button" class="ghost" data-rm="${esc(p.id)}" aria-label="Quitar a ${esc(p.name)}">Quitar</button></li>`).join('') : '<li><small>Esperando jugadores…</small></li>';
+    $('#pl').innerHTML = players.length ? players.map(p => `<li><span>${av(p.name)}<span><b>${esc(p.name)}</b> <small>· ${esc(p.joined_from)} · ${fmtDate(p.joined_at)}</small></span></span><button type="button" class="ghost" data-rm="${esc(p.id)}" aria-label="Quitar a ${esc(p.name)}">Quitar</button></li>`).join('') : '<li><small>Esperando jugadores…</small></li>';
     $('#bStart').disabled = players.length < 1;
     $$('[data-rm]').forEach(b => b.onclick = async () => { await sb.from('players').delete().eq('id', b.dataset.rm); refresh() });
   };
@@ -623,8 +720,8 @@ let lastPl = {};
 function buildView(){
   const rev = S.phase==='reveal' || S.winner!=null, c = DECK[S.card];
   return {seq: S.seq||0, phase: S.winner!=null ? 'end' : S.phase, turn: S.turn, slot: S.slot, ch: S.ch, win: S.win, deckLeft: S.deck.length,
-    card: rev && c ? {year: c[2], artist: c[0], title: c[1]} : null, remote: !!S.remote, audio: S.remote && S.phase==='listen' && S.winner==null && prev.card===S.card && prev.url ? prev.url : null, res: rev ? S.res : null, named: S.named,
-    players: S.players.map(p => ({name: p.name, tokens: p.tokens, tl: p.tl.map(k => [DECK[k][2], DECK[k][0], DECK[k][1]])}))};
+    card: rev && c ? {year: c[2], artist: c[0], title: c[1], cover: COV[c[3]] || ''} : null, remote: !!S.remote, audio: S.remote && S.phase==='listen' && S.winner==null && prev.card===S.card && prev.url ? prev.url : null, res: rev ? S.res : null, named: S.named,
+    players: S.players.map(p => ({name: p.name, tokens: p.tokens, tl: p.tl.map(k => [DECK[k][2], DECK[k][0], DECK[k][1], COV[DECK[k][3]] || ''])}))};
 }
 function sync(){
   if(!sb || !S?.gameId) return;
@@ -683,6 +780,7 @@ async function prefetch(i){
   try{
     const d = await jsonp('https://api.deezer.com/track/' + id);
     if(prev.card !== i) return;
+    if(d?.album?.cover_medium && !COV[id]) covSet(id, d.album.cover_medium);
     if(d.error || !d.preview) prev.err = 'Sin fragmento disponible'; else { prev.url = d.preview; au.src = d.preview; au.load(); if(S?.remote) sync() }
   }catch(e){ if(prev.card===i) prev.err = 'Sin conexión con Deezer' }
   paintPlayer();
@@ -698,7 +796,8 @@ function newCard(){ S.discard.push(S.card); S.card = draw(); S.slot = null; S.se
 
 function scoreBar(){
   $('#score').hidden = false;
-  $('#score').innerHTML = S.players.map((p,i)=>`<div class="chip ${i===S.turn?'on':''}"><span>${esc(p.name)}</span><b>${p.tl.length}/${S.win}</b><span class="dots" aria-label="${p.tokens} fichas">${'●'.repeat(p.tokens)}${'○'.repeat(Math.max(0,5-p.tokens))}</span></div>`).join('') + `<div class="chip" style="margin-left:auto">Sala ${esc(S.code)} · ${S.deck.length} en el mazo</div>`;
+  const mx = Math.max(...S.players.map(p => p.tl.length)), lead = S.players.filter(p => p.tl.length === mx).length === 1 && mx > 1 ? S.players.findIndex(p => p.tl.length === mx) : -1;
+  $('#score').innerHTML = S.players.map((p,i)=>`<div class="chip ${i===S.turn?'on':''}">${av(p.name)}<span>${esc(p.name)}${i===lead?' <span class="crown">👑</span>':''}</span><b>${p.tl.length}/${S.win}</b><span class="dots" aria-label="${p.tokens} fichas">${'●'.repeat(p.tokens)}${'○'.repeat(Math.max(0,5-p.tokens))}</span></div>`).join('') + `<div class="chip" style="margin-left:auto">Sala ${esc(S.code)} · ${S.deck.length} en el mazo</div>`;
 }
 function timeline(p, interactive){
   const tl = p.tl; let h = '';
@@ -706,7 +805,7 @@ function timeline(p, interactive){
     const chs = S.ch.filter(c=>c.slot===k);
     const cls = ['slot', S.slot===k?'sel':'', chs.length?'ch':'', S.phase==='reveal' && S.res && !S.res.ok && slotOk(tl,k,S.card) ? 'right':''].join(' ');
     h += `<button type="button" class="${cls}" data-slot="${k}" ${interactive?'':'disabled'} aria-label="Ubicar en posición ${k+1}">${S.slot===k?'▼':'+'}${chs.map(c=>`<span class="tag">${esc(S.players[c.p].name.slice(0,6))}</span>`).join('')}</button>`;
-    if(k<tl.length){ const c = DECK[tl[k]]; h += `<div class="sleeve"><span class="yr">${c[2]}</span><small>${esc(c[0])}<br>${esc(c[1])}</small></div>` }
+    if(k<tl.length){ const c = DECK[tl[k]]; h += `<div class="sleeve" style="--h:${hue(c[2])}">${covImg(c[3])}<span class="yr">${c[2]}</span><small>${esc(c[0])}<br>${esc(c[1])}</small></div>` }
   }
   return `<div class="tl">${h}</div>`;
 }
@@ -750,8 +849,8 @@ function render(){
         <button type="button" id="bNoPlay">No suena: otra</button>
         <button type="button" id="bBuy" ${p.tokens<3||S.slot!=null?'disabled':''}>Comprar carta (3 fichas)</button>
       </div>`
-    : `<div><span class="big">${c[2]}</span></div>
-      <p style="margin:8px 0 0;font-weight:800">${esc(c[1])}</p><p style="margin:0" class="who">${esc(c[0])}</p>
+    : `${revArt('', c[3])}<div><span class="big">${c[2]}</span></div>
+      <p style="margin:8px 0 0;font-weight:800;font-size:20px">${esc(c[1])}</p><p style="margin:0" class="who">${esc(c[0])}</p>
       <span class="verdict ${S.res.ok?'ok':'bad'}">${esc(S.res.msg)}</span>
       <p class="hint"><a href="https://www.deezer.com/track/${encodeURIComponent(c[3])}" target="_blank" rel="noopener">Escuchar completa en Deezer</a></p>
       <div class="row">
